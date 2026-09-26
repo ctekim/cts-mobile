@@ -1,63 +1,124 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRef, useState } from 'react';
+import {
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { MSGTYPE_HEARTBEAT, MSGTYPE_TS_LOGON } from '../common/msg_types';
+import { JSON_KEY_BROWSER_SESSION_ID, JSON_KEY_IN_SEQ, JSON_KEY_MESSAGE_TYPE, JSON_KEY_PASSWORD, JSON_KEY_SUBMITTER, JSON_KEY_TEST_ID, JSON_KEY_USER } from '../common/common.ts';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+const TRANSACTION_URL = 'ws://192.168.56.100:9401';
+const HEARTBEAT_INTERVAL = 20000; // 20 seconds
 
 export default function HomeScreen() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [status, setStatus] = useState('Disconnected');
+
+  const wsRef = useRef<WebSocket | null>(null);
+
+  const bsidRef = useRef(
+    'mobile-' +
+    Date.now().toString(36) +
+    '-' +
+    Math.random().toString(36).substring(2, 10)
+  );
+
+  function handleLogin() {
+    if (!username || !password) {
+      Alert.alert('Login', 'Please enter User Id and Password');
+      return;
+    }
+
+    setStatus('Connecting...');
+
+    const ws = new WebSocket(TRANSACTION_URL);
+    wsRef.current = ws;
+
+    const heartbeatInterval = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        const heartbeatMessage = {
+          [JSON_KEY_USER]: username,
+          [JSON_KEY_SUBMITTER]: username,
+          [JSON_KEY_MESSAGE_TYPE]: MSGTYPE_HEARTBEAT,
+          [JSON_KEY_TEST_ID]: 'ABCDE',
+        };
+
+        ws.send(JSON.stringify(heartbeatMessage));
+
+        // console.log('[CTS Mobile] Heartbeat sent:', heartbeatMessage);
+      }
+    }, HEARTBEAT_INTERVAL);
+
+    ws.onopen = () => {
+      setStatus('Connected - sending logon');
+
+      const loginMessage = {
+        [JSON_KEY_MESSAGE_TYPE]: MSGTYPE_TS_LOGON,
+        [JSON_KEY_USER]: username,
+        [JSON_KEY_SUBMITTER]: username,
+        [JSON_KEY_PASSWORD]: password,
+        [JSON_KEY_IN_SEQ]: 0,
+        [JSON_KEY_BROWSER_SESSION_ID]: bsidRef.current,
+      };
+
+      console.log('[CTS Mobile] Sending logon:', loginMessage);
+
+      ws.send(JSON.stringify(loginMessage));
+
+      setStatus('Logon sent');
+    };
+
+    ws.onmessage = (event) => {
+      setStatus('Receiving CTS messages');
+    };
+
+    ws.onerror = (error) => {
+      console.error('[CTS Mobile] WebSocket error:', error);
+      setStatus('Connection error');
+      Alert.alert('CTS', 'WebSocket connection error');
+    };
+
+    ws.onclose = () => {
+      console.log('[CTS Mobile] WebSocket closed');
+      setStatus('Disconnected');
+    };
+  }
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <View style={styles.container}>
+      <Text style={styles.title}>CTS Mobile</Text>
+      <Text style={styles.subtitle}>Sign in to continue</Text>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+      <View style={styles.form}>
+        <TextInput
+          style={styles.input}
+          placeholder="Username"
+          autoCapitalize="none"
+          value={username}
+          onChangeText={setUsername}
+        />
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+          <Text style={styles.buttonText}>Login</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.status}>
+          Status: {status}
+        </Text>
+      </View>
+    </View>
   );
 }
 
@@ -65,34 +126,52 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    flexDirection: 'row',
+    padding: 24,
   },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
+
   title: {
+    fontSize: 32,
+    fontWeight: 'bold',
     textAlign: 'center',
   },
-  code: {
-    textTransform: 'uppercase',
+
+  subtitle: {
+    marginTop: 8,
+    fontSize: 16,
+    textAlign: 'center',
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+
+  form: {
+    marginTop: 40,
+  },
+
+  input: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: '#999',
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+    fontSize: 16,
+  },
+
+  button: {
+    height: 50,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#222',
+  },
+
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  status: {
+    marginTop: 20,
+    textAlign: 'center',
+    fontSize: 14,
   },
 });
