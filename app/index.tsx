@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { MSGTYPE_HEARTBEAT, MSGTYPE_TS_LOGON } from '../common/msg_types';
-import { JSON_KEY_BROWSER_SESSION_ID, JSON_KEY_IN_SEQ, JSON_KEY_MESSAGE_TYPE, JSON_KEY_PASSWORD, JSON_KEY_SUBMITTER, JSON_KEY_TEST_ID, JSON_KEY_USER } from '../common/common.ts';
+import { MSGTYPE_HEARTBEAT, MSGTYPE_TS_LOGON } from '../src/common/msg_types';
+import { JSON_KEY_BROWSER_SESSION_ID, JSON_KEY_IN_SEQ, JSON_KEY_MESSAGE_TYPE, JSON_KEY_PASSWORD, JSON_KEY_SUBMITTER, JSON_KEY_TEST_ID, JSON_KEY_USER } from '../src/common/common';
 
 const TRANSACTION_URL = 'ws://192.168.56.100:9401';
 const HEARTBEAT_INTERVAL = 20000; // 20 seconds

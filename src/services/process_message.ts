@@ -11,11 +11,11 @@ import {
   ROLE_MARKET_CONTROLLER_VIEWER, ROLE_SUPER_CONTROLLER_PERFORMANCE,
   ROLE_MARKET_CONTROLLER_PERFORMANCE, ROLE_MARKET_CONTROLLER_VIEWER_PERFORMANCE,
   ROLE_TRADING_OPERATOR,
-} from '../common/common.ts';
-import { MSGTYPE_HEARTBEAT, MSGTYPE_TS_LOGON, MSGTYPE_TS_LOGOFF, /* ...etc... */ } from '../common/msg_types';
-import { TranslateErrorMessage } from '../common/error_codes';
-import { HandleHoldingsReply, HandleNotificationsReply, /* ...etc... */ } from './transaction_messages';
-import { HandleExchangeReply, HandleInstrumentReply, /* ...etc... */ } from './datafeed_messages';
+  FAILURE_BACKGROUND_COLOUR,
+} from '../common/common';
+import { TranslateErrorMessage } from '../common/error_codes.ts';
+import { HandleHoldingsReply, HandleNotificationsReply, HandleParticipantReply, HandleTradingAccountReply, HandleTradingRulesReply, HandleUserReply, HandleUsersOrdersReply, HandleUsersTradesReply, } from './transaction_messages';
+import { HandleExchangeReply, HandleIndexMembersReply, HandleIndicesReply, HandleInstrumentReply, HandleMarketReply, HandleOrderBookReply, HandlePublicTradesReply, HandleTradingEventReply, } from './datafeed_messages';
 import { MSG_TYPE_EXCHANGE_REPLY, MSG_TYPE_MARKET_REPLY, MSGTYPE_HEARTBEAT, MSGTYPE_INSTRUMENT_REPLY, MSGTYPE_ORDER_AMEND, MSGTYPE_ORDER_CANCEL, MSGTYPE_ORDER_NEW, 
             MSGTYPE_ORDERBOOK_REPLY, MSGTYPE_PUBLIC_TRADES_REPLY, MSGTYPE_TRADING_EVENT_REPLY, MSGTYPE_TS_LOGOFF, 
             MSGTYPE_TRADING_ACCOUNT_REPLY, MSGTYPE_USERS_ORDERS_REPLY, MSGTYPE_USERS_TRADES_REPLY, MSGTYPE_USER_REPLY, MSGTYPE_HOLDINGS_REPLY, 
@@ -67,7 +67,9 @@ import { MSG_TYPE_EXCHANGE_REPLY, MSG_TYPE_MARKET_REPLY, MSGTYPE_HEARTBEAT, MSGT
             MSG_TYPE_CHANGE_BACKUP,
             MSG_TYPE_CHANGE_COORDINATOR,
             MSG_TYPE_USER_FORCE_LOGOFF,
-        } from '../../common/msg_types';
+        } from '../common/msg_types.js';
+
+import { setForcePasswordChange, setIsMarketController, setRoleId, setSeqNum} from '..//redux/globalsSlice';
 
 // Small adapter shims so you don't need to rewrite the switch bodies
 const ShowError = (msg: string, _flag?: boolean) => Alert.alert('Error', msg);
@@ -90,66 +92,67 @@ export function ProcessMessage(
   if (m_type) {
     switch (m_type) {
       // ---- Datafeed / transaction replies ----
-            case MSG_TYPE_EXCHANGE_REPLY:
-               HandleExchangeReply(cmd, json_message);
-               break;
-            case MSGTYPE_HOLDINGS_REPLY:
-               HandleHoldingsReply(cmd, json_message);
-               break;
-            case MSGTYPE_INSTRUMENT_REPLY:
-               HandleInstrumentReply(cmd, json_message);
-               break;
-            case MSG_TYPE_INDICES_REPLY:
-               if (!isMarketController) {
-                  HandleIndicesReply(cmd, json_message);
-               }
-               break;
-            case MSGTYPE_INDICES_FULL_ACCESS_REPLY:
-               HandleIndicesReply(cmd, json_message);
-               break;
-            case MSG_TYPE_INDEX_MEMBERS_REPLY:
-               HandleIndexMembersReply(cmd, json_message);
-               break;
-            case MSGTYPE_NOTIFICATIONS_REPLY:
-               HandleNotificationsReply(cmd, json_message);
-               break;
-            case MSGTYPE_ORDERBOOK_REPLY:
-               HandleOrderBookReply(cmd, json_message);
-               break;
-            case MSG_TYPE_MARKET_REPLY:
-               HandleMarketReply(cmd, json_message);
-               break;
-            case MSGTYPE_PARTICIPANT_REPLY:
-               HandleParticipantReply(cmd, json_message);
-               break;
-            case MSGTYPE_PUBLIC_TRADES_REPLY:
-               HandlePublicTradesReply(cmd, json_message);
-               break;
-            case MSGTYPE_TRADING_EVENT_REPLY:
-               HandleTradingEventReply(cmd, json_message);
-               break;
-            case MSGTYPE_USERS_ORDERS_REPLY:
-            case MSG_TYPE_SPECIFIC_ORDERS_REPLY:
-               HandleUsersOrdersReply(cmd, json_message);
-               break;
-            case MSGTYPE_USERS_TRADES_REPLY:
-            case MSG_TYPE_SPECIFIC_TRADES_REPLY:
-               HandleUsersTradesReply(cmd, json_message);
-               break;
-            case MSGTYPE_TRADING_ACCOUNT_REPLY:
-               HandleTradingAccountReply(cmd, json_message);
-               break;
-            case MSGTYPE_TRADING_RULES_REPLY:
-               HandleTradingRulesReply(cmd, json_message);
-               break;
-            case MSGTYPE_USER_REPLY:
-               HandleUserReply(cmd, json_message, isMarketController, dispatch);
-               break;
-            case MSGTYPE_FORCE_LOGOFF:
-               clearUserSessionAndTables();
-               ShowInfo("Server has logged you out!", FAILURE_BACKGROUND_COLOUR);
-               closeTSConnection();
-               break;
+      case MSG_TYPE_EXCHANGE_REPLY:
+         HandleExchangeReply(cmd, json_message);
+         break;
+      case MSGTYPE_HOLDINGS_REPLY:
+         HandleHoldingsReply(cmd, json_message);
+         break;
+      case MSGTYPE_INSTRUMENT_REPLY:
+         HandleInstrumentReply(cmd, json_message);
+         break;
+      case MSG_TYPE_INDICES_REPLY:
+         if (!isMarketController) {
+            HandleIndicesReply(cmd, json_message);
+         }
+         break;
+      case MSGTYPE_INDICES_FULL_ACCESS_REPLY:
+         HandleIndicesReply(cmd, json_message);
+         break;
+      case MSG_TYPE_INDEX_MEMBERS_REPLY:
+         HandleIndexMembersReply(cmd, json_message);
+         break;
+      case MSGTYPE_NOTIFICATIONS_REPLY:
+         HandleNotificationsReply(cmd, json_message);
+         break;
+      case MSGTYPE_ORDERBOOK_REPLY:
+         HandleOrderBookReply(cmd, json_message);
+         break;
+      case MSG_TYPE_MARKET_REPLY:
+         HandleMarketReply(cmd, json_message);
+         break;
+      case MSGTYPE_PARTICIPANT_REPLY:
+         HandleParticipantReply(cmd, json_message);
+         break;
+      case MSGTYPE_PUBLIC_TRADES_REPLY:
+         HandlePublicTradesReply(cmd, json_message);
+         break;
+      case MSGTYPE_TRADING_EVENT_REPLY:
+         HandleTradingEventReply(cmd, json_message);
+         break;
+      case MSGTYPE_USERS_ORDERS_REPLY:
+      case MSG_TYPE_SPECIFIC_ORDERS_REPLY:
+         HandleUsersOrdersReply(cmd, json_message);
+         break;
+      case MSGTYPE_USERS_TRADES_REPLY:
+      case MSG_TYPE_SPECIFIC_TRADES_REPLY:
+         HandleUsersTradesReply(cmd, json_message);
+         break;
+      case MSGTYPE_TRADING_ACCOUNT_REPLY:
+         HandleTradingAccountReply(cmd, json_message);
+         break;
+      case MSGTYPE_TRADING_RULES_REPLY:
+         HandleTradingRulesReply(cmd, json_message);
+         break;
+      case MSGTYPE_USER_REPLY:
+         HandleUserReply(cmd, json_message, isMarketController, dispatch);
+         break;
+      // kim todo implement later, just to compile and do one message
+      // case MSGTYPE_FORCE_LOGOFF:
+      //    clearUserSessionAndTables();
+      //    ShowInfo("Server has logged you out!", FAILURE_BACKGROUND_COLOUR);
+      //    closeTSConnection();
+      //    break;
       case MSGTYPE_FORCE_LOGOFF:
         Alert.alert('Session', 'Server has logged you out!');
         onLogoff?.();
@@ -177,7 +180,7 @@ export function ProcessMessage(
               ));
             }
 
-            dispatch(loadPanelPositionsForUser(userId, getDefaultLayout()));
+            // dispatch(loadPanelPositionsForUser(userId, getDefaultLayout()));
             dispatch(setSeqNum(sequenceNumber));
             HandleSuccessResult(`Logon OK. Next seq: ${sequenceNumber}`);
 

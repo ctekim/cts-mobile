@@ -7,10 +7,11 @@ import {
   ADD_TRADING_ACCOUNT, DELETE_ROW, NOTIFICATIONS_TABLE,
   TRADING_RULES_TABLE, ADD_TRADING_RULES, TRADING_EVENTS_TABLE,
   BIT_MASK_ORDER_PAIR, HasPermission,
-} from '../common/common.ts';
+} from '../common/common';
+import { setOrderPair } from '../redux/globalsSlice.ts';
 
 
-export const HandleTradingAccountReply = (cmd, json_message) => {
+export const HandleTradingAccountReply = (cmd: string, json_message: any) => {
     switch (cmd) {
         case CMD_ADD:
             DispatchTableEvent(ADD_ROW, TRADING_ACCOUNTS_TABLE, json_message);
@@ -29,7 +30,7 @@ export const HandleTradingAccountReply = (cmd, json_message) => {
     }
 };
 
-export const HandleTradingRulesReply = (cmd, json_message) => {
+export const HandleTradingRulesReply = (cmd: string, json_message: any) => {
     switch (cmd) {
         case CMD_ADD:
             DispatchTableEvent(ADD_ROW, TRADING_RULES_TABLE, json_message);
@@ -46,7 +47,7 @@ export const HandleTradingRulesReply = (cmd, json_message) => {
     }
 };
 
-export const HandleHoldingsReply = (cmd, json_message) => {
+export const HandleHoldingsReply = (cmd: string, json_message: any) => {
     switch (cmd) {
         case CMD_ADD:
             // DispatchTableEvent(DELETE_TABLE, HOLDINGS_TABLE, "");
@@ -66,7 +67,7 @@ export const HandleHoldingsReply = (cmd, json_message) => {
     }
 };
 
-export const HandleNotificationsReply = (cmd, json_message) => {
+export const HandleNotificationsReply = (cmd: string, json_message: any) => {
     switch (cmd) {
         case CMD_ADD:
             DispatchTableEvent(ADD_ROW, NOTIFICATIONS_TABLE, json_message);
@@ -77,7 +78,7 @@ export const HandleNotificationsReply = (cmd, json_message) => {
     }
 };
 
-export const HandleUsersOrdersReply = (cmd, json_message) => {
+export const HandleUsersOrdersReply = (cmd: string, json_message: any) => {
     switch (cmd) {
         case CMD_ADD:
             DispatchTableEvent(ADD_ROW, USERS_ORDERS_TABLE, json_message);
@@ -94,7 +95,7 @@ export const HandleUsersOrdersReply = (cmd, json_message) => {
     }
 };
 
-export const HandleUsersTradesReply = (cmd, json_message) => {
+export const HandleUsersTradesReply = (cmd: string, json_message: any) => {
     switch (cmd) {
         case CMD_ADD:
             DispatchTableEvent(ADD_ROW, USERS_TRADES_TABLE, json_message);
@@ -111,7 +112,7 @@ export const HandleUsersTradesReply = (cmd, json_message) => {
     }
 };
 
-export const HandleUserReply = (cmd, json_message, isMarketContoller, dispatch) => {
+export const HandleUserReply = (cmd: string, json_message: any, isMarketContoller: boolean, dispatch: any) => {
     // Add error checking at the start
     if (!json_message) {
         console.error('HandleUserReply: json_message is undefined', { cmd, json_message, isMarketContoller });
@@ -139,7 +140,7 @@ export const HandleUserReply = (cmd, json_message, isMarketContoller, dispatch) 
     }
 };
 
-export const HandleParticipantReply = (cmd, json_message) => {
+export const HandleParticipantReply = (cmd: string, json_message: any) => {
     switch (cmd) {
         case CMD_ADD:
             DispatchTableEvent(ADD_ROW, PARTICIPANTS_TABLE, json_message);

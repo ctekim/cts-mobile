@@ -1,7 +1,35 @@
-import { createSlice, createSelector } from '@reduxjs/toolkit';
-import { ROLE_ID_NOT_SET } from '../common/common.ts';
+// src/redux/globalsSlice.ts
+import { createSlice, createSelector, PayloadAction } from '@reduxjs/toolkit';
+import type { RootState } from './store';
+import { ROLE_ID_NOT_SET } from '../common/common';
 
-const initialState = {
+// ---- Types ----------------------------------------------------------------
+
+export interface InstrumentRow {
+  code: string;
+  [key: string]: any;
+}
+
+export interface GlobalsState {
+  tableData: Record<string, InstrumentRow>;
+  seqNum: number;
+  roleId: number;
+  isMarketController: boolean;
+  userId: string;
+  tsUserId: string;
+  dfUserId: string;
+  selectedInstrument: InstrumentRow | null;
+  instrumentsLoaded: boolean;
+  usersLoaded: boolean;
+  tsConnected: boolean;
+  force_password_change: boolean;
+  ordersRequest: boolean;
+  tradesRequest: boolean;
+  holdingsRequest: boolean;
+  orderPair: boolean;
+}
+
+const initialState: GlobalsState = {
   tableData: {},
   seqNum: 0,
   roleId: ROLE_ID_NOT_SET,
@@ -20,83 +48,74 @@ const initialState = {
   orderPair: false,
 };
 
+// ---- Slice ----------------------------------------------------------------
+
 const globalsSlice = createSlice({
   name: 'globals',
   initialState,
   reducers: {
-    addOrUpdateInstrumentRow: (state, action) => {
-      // console.log('addOrUpdateInstrumentRow, payload: ', action.payload, 'size: ',  Object.keys(state.tableData).length);
+    addOrUpdateInstrumentRow: (state, action: PayloadAction<InstrumentRow>) => {
       const { code } = action.payload;
       state.tableData[code] = { ...state.tableData[code], ...action.payload };
     },
-    deleteInstrumentRow: (state, action) => {
-      console.log('slice delete instruments');
+    deleteInstrumentRow: (state, action: PayloadAction<{ code: string }>) => {
       delete state.tableData[action.payload.code];
     },
-    setInstrumentsLoaded: (state, action) => {
-      // console.log('setting instrumnt is loaded to :', action.payload);
+    setInstrumentsLoaded: (state, action: PayloadAction<boolean>) => {
       state.instrumentsLoaded = action.payload;
     },
-    setUsersLoaded: (state, action) => {
-      // console.log('setting instrumnt is loaded to :', action.payload);
+    setUsersLoaded: (state, action: PayloadAction<boolean>) => {
       state.usersLoaded = action.payload;
     },
-    setOrdersRequest: (state, action) => {
+    setOrdersRequest: (state, action: PayloadAction<boolean>) => {
       state.ordersRequest = action.payload;
     },
-    setOrderPair: (state, action) => {
+    setOrderPair: (state, action: PayloadAction<boolean>) => {
       state.orderPair = action.payload;
     },
-    setTradesRequest: (state, action) => {
+    setTradesRequest: (state, action: PayloadAction<boolean>) => {
       state.tradesRequest = action.payload;
     },
-    setHoldingsRequest: (state, action) => {
+    setHoldingsRequest: (state, action: PayloadAction<boolean>) => {
       state.holdingsRequest = action.payload;
     },
     incrementSeqNum: (state) => {
       state.seqNum += 1;
     },
-    setSeqNum: (state, action) => {
+    setSeqNum: (state, action: PayloadAction<number>) => {
       state.seqNum = action.payload;
     },
-    setRoleId: (state, action) => {
+    setRoleId: (state, action: PayloadAction<number>) => {
       state.roleId = action.payload;
     },
-    setIsMarketController: (state, action) => {
+    setIsMarketController: (state, action: PayloadAction<boolean>) => {
       state.isMarketController = action.payload;
     },
-    setTSUserId: (state, action) => {
+    setTSUserId: (state, action: PayloadAction<string>) => {
       state.tsUserId = action.payload;
-      state.userId = action.payload;        // kim todo do this for now, this is for later if there is onbehalfof
-    },
-    setUserId: (state, action) => {
       state.userId = action.payload;
     },
-    setDFUserId: (state, action) => {
+    setUserId: (state, action: PayloadAction<string>) => {
+      state.userId = action.payload;
+    },
+    setDFUserId: (state, action: PayloadAction<string>) => {
       state.dfUserId = action.payload;
     },
-    setSelectedInstrument: (state, action) => { // ✅ new reducer
-      state.selectedInstrument = action.payload; // update selectedInstrument in state
+    setSelectedInstrument: (state, action: PayloadAction<InstrumentRow | null>) => {
+      state.selectedInstrument = action.payload;
     },
-    setTSConnected: (state, action) => {
+    setTSConnected: (state, action: PayloadAction<boolean>) => {
       state.tsConnected = action.payload;
     },
-    setForcePasswordChange: (state, action) => {
+    setForcePasswordChange: (state, action: PayloadAction<boolean>) => {
       state.force_password_change = action.payload;
     },
     printGlobalTableData: (state) => {
-      console.log("GlobalsSlice, localTableData:", JSON.parse(JSON.stringify(state.tableData)));
-      console.log("GlobalsSlice, seqNum:", state.seqNum);
-      console.log("GlobalsSlice, roleId:", state.roleId);
-      console.log("GlobalsSlice, isMarketController:", state.isMarketController);
-      console.log("GlobalsSlice, tsUserId:", state.tsUserId);
-      console.log("GlobalsSlice, userId:", state.userId);
-      console.log("GlobalsSlice, dfUserId:", state.dfUserId);
-      console.log("GlobalsSlice, tsConnected:", state.tsConnected);
+      console.log('GlobalsSlice, seqNum:', state.seqNum);
+      console.log('GlobalsSlice, roleId:', state.roleId);
     },
-
     resetGlobals: () => initialState,
-  }
+  },
 });
 
 export const {
@@ -115,43 +134,44 @@ export const {
   setTSUserId,
   setDFUserId,
   setTSConnected,
-  setSelectedInstrument, // ✅ new export
+  setSelectedInstrument,
   setForcePasswordChange,
   printGlobalTableData,
   resetGlobals,
 } = globalsSlice.actions;
 
-// Selectors
-export const selectSeqNum = (state) => state.globals.seqNum;
-export const selectRoleId = (state) => state.globals.roleId;
-export const selectInstrumentsLoaded = (state) => state.globals.instrumentsLoaded;
-export const selectUsersLoaded = (state) => state.globals.usersLoaded;
-export const selectOrdersRequest = (state) => state.globals.ordersRequest;
-export const selectOrderPair = (state) => state.globals.orderPair;
-export const selectTradesRequest = (state) => state.globals.tradesRequest;
-export const selectHoldingsRequest = (state) => state.globals.holdingsRequest;
-export const selectTSUserId = (state) => state.globals.tsUserId;
-export const selectUserId = (state) => state.globals.userId;
-export const selectIsMarketController = (state) => state.globals.isMarketController;
-export const selectDFUserId = (state) => state.globals.dfUserId;
-export const selectTableData = (state) => state.globals.tableData;
-export const selectTSConnected = (state) => state.globals.tsConnected;
-export const selectForcePasswordChange = (state) => state.globals.force_password_change;
-export const selectSelectedInstrument = (state) => state.globals.selectedInstrument; // ✅ new selector
+// ---- Selectors ------------------------------------------------------------
 
-export const makeSelectRowByCode = () =>
-  createSelector(
-    [selectTableData, (_, code) => code],
-    (tableData, code) => tableData[code]
-);
+export const selectSeqNum = (state: RootState) => state.globals.seqNum;
+export const selectRoleId = (state: RootState) => state.globals.roleId;
+export const selectInstrumentsLoaded = (state: RootState) => state.globals.instrumentsLoaded;
+export const selectUsersLoaded = (state: RootState) => state.globals.usersLoaded;
+export const selectOrdersRequest = (state: RootState) => state.globals.ordersRequest;
+export const selectOrderPair = (state: RootState) => state.globals.orderPair;
+export const selectTradesRequest = (state: RootState) => state.globals.tradesRequest;
+export const selectHoldingsRequest = (state: RootState) => state.globals.holdingsRequest;
+export const selectTSUserId = (state: RootState) => state.globals.tsUserId;
+export const selectUserId = (state: RootState) => state.globals.userId;
+export const selectIsMarketController = (state: RootState) => state.globals.isMarketController;
+export const selectDFUserId = (state: RootState) => state.globals.dfUserId;
+export const selectTableData = (state: RootState) => state.globals.tableData;
+export const selectTSConnected = (state: RootState) => state.globals.tsConnected;
+export const selectForcePasswordChange = (state: RootState) => state.globals.force_password_change;
+export const selectSelectedInstrument = (state: RootState) => state.globals.selectedInstrument;
 
-export const makeGetCellValue = () =>
-  createSelector(
-    [selectTableData, (_, code) => code, (_, __, columnName) => columnName],
-    (tableData, code, columnName) => {
-      const row = tableData[code];
-      return row ? row[columnName] : undefined;
-    }
-);
+// Parametrized selectors — these live in the web app too, but note:
+// createSelector is a *factory* here; you were calling makeSelectRowByCode()
+// on every render which defeats memoization. For mobile, prefer using it as
+// a plain function selector unless you cache the instance with useMemo.
+
+export const selectRowByCode =
+  (code: string) =>
+  (state: RootState) =>
+    state.globals.tableData[code];
+
+export const selectCellValue =
+  (code: string, columnName: string) =>
+  (state: RootState) =>
+    state.globals.tableData[code]?.[columnName];
 
 export default globalsSlice.reducer;

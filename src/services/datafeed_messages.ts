@@ -19,7 +19,7 @@ import {
   PUBLIC_TRADES_TABLE,
   PUBLIC_TRADE,
   BUY_SIDE,
-} from '../common/common.ts';
+} from '../common/common';
 
 export const HandleExchangeReply = (cmd: string, json_message: any) => {
     switch (cmd) {

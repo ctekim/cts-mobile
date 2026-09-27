@@ -1,4 +1,4 @@
-import { UNKNOWN } from "./common.ts"
+import { UNKNOWN } from "./common"
 
 export const MSGTYPE_HEARTBEAT               = 1000
 export const MSGTYPE_TS_LOGON                = 1001

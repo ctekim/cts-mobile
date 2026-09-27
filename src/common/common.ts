@@ -1,6 +1,7 @@
 // import Swal from 'sweetalert2';
-// import { DispatchTableEvent } from '../components/events/events';
-import { v4 as uuidv4 } from 'uuid';
+import { Alert } from 'react-native';
+import { DispatchTableEvent } from '../common/events';
+// import { v4 as uuidv4 } from 'uuid';
 
 // json message types
 export const SUCCESS_REPLY                 = 888
@@ -1390,8 +1391,8 @@ export const tableOptions = [
 //   });
 // };
 
-// export const SUCCESS_BACKGROUND_COLOUR    = '#14532d'
-// export const FAILURE_BACKGROUND_COLOUR    = '#1e293b'
+export const SUCCESS_BACKGROUND_COLOUR    = '#14532d'
+export const FAILURE_BACKGROUND_COLOUR    = '#1e293b'
 
 // export const ShowInfo = (msg, bgColor = '#14532d') => {
 //   Swal.fire({
@@ -1415,19 +1416,32 @@ export const tableOptions = [
 //   });
 // };
 
-// export function HandleSuccessResult(message, showInfo = false) {
-//   const result = {
-//     [JSON_KEY_TIME]: GetFormattedTimestamp(),
-//     [JSON_KEY_MESSAGE]: message,
-//     [JSON_KEY_RESULTS_TYPE]: RESULTS_TYPE_REPLY_SUCCESS,
-//   };
+// mobile alert
+export const ShowInfo = (msg: string, _bgColor: string = '#14532d'): void => {
+  Alert.alert('Information', msg);
+};
 
-//   DispatchTableEvent(ADD_ROW, RESULTS_TABLE, result);
+export const ShowError = (msg: string, _bgColor: string = '#7f1d1d'): void => {
+  Alert.alert('Error', msg);
+};
 
-//   if (showInfo) {
-//     ShowInfo(message, SUCCESS_BACKGROUND_COLOUR);
-//   }
-// }
+export const ShowSuccess = (msg: string, _bgColor: string = '#14532d'): void => {
+  Alert.alert('Success', msg);
+};
+
+export function HandleSuccessResult(message: string, showInfo: boolean = false): void {
+  const result = {
+    [JSON_KEY_TIME]: GetFormattedTimestamp(),
+    [JSON_KEY_MESSAGE]: message,
+    [JSON_KEY_RESULTS_TYPE]: RESULTS_TYPE_REPLY_SUCCESS,
+  };
+
+  DispatchTableEvent(ADD_ROW, RESULTS_TABLE, result);
+
+  if (showInfo) {
+    ShowInfo(message, SUCCESS_BACKGROUND_COLOUR);
+  }
+}
 
 // /**
 //  * Shows a generic confirmation dialog using SweetAlert2.
@@ -1758,21 +1772,22 @@ export const tableOptions = [
 //   return now.toLocaleTimeString('en-GB', { hour12: false }); // 24-hour format
 // }
 
-// export function GetFormattedTimestamp() {
-//   const now = new Date();
+export function GetFormattedTimestamp(): string {
+  const now = new Date();
 
-//   const pad = (n, width = 2) => String(n).padStart(width, '0');
+  const pad = (n: number, width: number = 2): string =>
+    String(n).padStart(width, '0');
 
-//   const year = now.getFullYear();
-//   const month = pad(now.getMonth() + 1); // Months are 0-based
-//   const day = pad(now.getDate());
-//   const hours = pad(now.getHours());
-//   const minutes = pad(now.getMinutes());
-//   const seconds = pad(now.getSeconds());
-//   const milliseconds = pad(now.getMilliseconds(), 3);
+  const year = now.getFullYear();
+  const month = pad(now.getMonth() + 1);
+  const day = pad(now.getDate());
+  const hours = pad(now.getHours());
+  const minutes = pad(now.getMinutes());
+  const seconds = pad(now.getSeconds());
+  const milliseconds = pad(now.getMilliseconds(), 3);
 
-//   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
-// }
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+}
 
 // export const BROWSER_SESSION_ID = 'browser_session_id'
 
@@ -1934,9 +1949,9 @@ export const tableOptions = [
 //   }
 // };
 
-// export const HasPermission = (userPermissions, requiredPermission) => {
-//     return (userPermissions & requiredPermission) !== 0;
-// };
+export const HasPermission = (userPermissions: number, requiredPermission: number): boolean => {
+  return (userPermissions & requiredPermission) !== 0;
+};
 
 // // export const sessionOptions = [
 // //    { id: DROPDOWN_LIST_NONE_ID, name: DROPDOWN_LIST_NONE },
