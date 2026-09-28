@@ -1,14 +1,14 @@
 // src/redux/store.ts
 import { configureStore } from '@reduxjs/toolkit';
 import globalsReducer from './globalsSlice';
+import tablesReducer from './tablesSlice';
 
 export const store = configureStore({
   reducer: {
     globals: globalsReducer,
-    // add more slices here as you build screens
+    tables: tablesReducer,
   },
-  middleware: (getDefault) =>
-    getDefault({ serializableCheck: false }), // websocket payloads may not be serializable
+  middleware: (getDefault) => getDefault({ serializableCheck: false }),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

@@ -4,6 +4,7 @@ import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'reac
 import { useDispatch, useSelector } from 'react-redux';
 import { ProcessMessage } from '../services/process_message';
 import { setSeqNum, setRoleId, setIsMarketController, setForcePasswordChange } from '../redux/globalsSlice';
+import { MSGTYPE_HEARTBEAT, MSGTYPE_TS_LOGON } from '../common/msg_types';
 
 const TRANSACTION_URL = 'ws://192.168.56.100:9401';
 const HEARTBEAT_INTERVAL = 20000;
@@ -64,13 +65,7 @@ export default function HomeScreen() {
           dispatch,
           setLoggedOn,
           username,
-          isMarketController,
-          () => {
-            // on forced logoff
-            if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-            ws.close();
-            setStatus('Logged out by server');
-          }
+          isMarketController
         );
       } catch (e) {
         console.error('[CTS] Bad message', e, event.data);

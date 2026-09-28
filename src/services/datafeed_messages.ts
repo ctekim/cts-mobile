@@ -40,22 +40,23 @@ export const HandleExchangeReply = (cmd: string, json_message: any) => {
 };
 
 export const HandleInstrumentReply = (cmd: string, json_message: any) => {
-   switch (cmd) {
-       case CMD_ADD:
-            DispatchTableEvent(ADD_ROW, INSTRUMENTS_TABLE, json_message);
-            DispatchTableEvent(ADD_ROW, CURRENCIES_TABLE, json_message);
-            DispatchTableEvent(ADD_INSTRUMENT, ORDERS_FORM, json_message);
+    console.log('HandleInstrumentReply called with cmd:', cmd, 'json_message:', json_message);
+    switch (cmd) {
+        case CMD_ADD:
+                DispatchTableEvent(ADD_ROW, INSTRUMENTS_TABLE, json_message);
+                DispatchTableEvent(ADD_ROW, CURRENCIES_TABLE, json_message);
+                DispatchTableEvent(ADD_INSTRUMENT, ORDERS_FORM, json_message);
+                break;
+        case CMD_DELETE:
+                console.log('Instrument delete not implemented');
+                break;
+        case CMD_UPDATE:
+                DispatchTableEvent(UPDATE_ROW, INSTRUMENTS_TABLE, json_message);
+                break;
+            default:
+            console.log('Unknown command in instrument reply:', cmd);
             break;
-       case CMD_DELETE:
-            console.log('Instrument delete not implemented');
-            break;
-       case CMD_UPDATE:
-            DispatchTableEvent(UPDATE_ROW, INSTRUMENTS_TABLE, json_message);
-            break;
-        default:
-           console.log('Unknown command in instrument reply:', cmd);
-           break;
-   }
+    }
 };
 
 export const HandleIndicesReply = (cmd: string, json_message: any) => {

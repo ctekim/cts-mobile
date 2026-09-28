@@ -48,6 +48,7 @@ export const HandleTradingRulesReply = (cmd: string, json_message: any) => {
 };
 
 export const HandleHoldingsReply = (cmd: string, json_message: any) => {
+    console.log('HandleHoldingsReply called with cmd:', cmd, 'json_message:', json_message);
     switch (cmd) {
         case CMD_ADD:
             // DispatchTableEvent(DELETE_TABLE, HOLDINGS_TABLE, "");
