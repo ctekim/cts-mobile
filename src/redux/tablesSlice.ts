@@ -41,10 +41,13 @@ const tablesSlice = createSlice({
     resetTables: (state) => {
       state.tables = {};
     },
+    clearAll: (state) => {
+      state.tables = {};
+    },
   },
 });
 
-export const { addRow, updateRow, deleteRow, clearTable } = tablesSlice.actions;
+export const { addRow, updateRow, deleteRow, clearTable, clearAll } = tablesSlice.actions;
 export const selectTableRows = (table: string) => (state: any) =>
   state.tables.tables[table] || [];
 export default tablesSlice.reducer;

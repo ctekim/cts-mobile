@@ -11,8 +11,9 @@ import {
 import { store } from '../src/redux/store';
 import { ProcessMessage } from '../src/services/process_message';
 import { registerCloseHandler } from '../src/services/ts_connection';
-import { setTSUserId } from '../src/redux/globalsSlice';
+import { resetGlobals, setBSId, setTSUserId } from '../src/redux/globalsSlice';
 import { DebugPanel } from '../src/components/DebugPanel';
+import { setWs, setHeartbeat } from '../src/services/ws_state';
 
 const TRANSACTION_URL = 'ws://192.168.56.100:9401';
 const HEARTBEAT_INTERVAL = 20000;
@@ -25,9 +26,9 @@ export default function HomeScreen() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const bsidRef = useRef(
-    'mobile-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 10)
-  );
+  // const bsidRef = useRef(
+  //   'mobile-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 10)
+  // );
 
   function handleLogin() {
     if (!username || !password) {
@@ -35,11 +36,14 @@ export default function HomeScreen() {
       return;
     }
 
+    store.dispatch(resetGlobals());  
     store.dispatch(setTSUserId(username));
-
+    store.dispatch(setBSId(username));
     setStatus('Connecting...');
+
     const ws = new WebSocket(TRANSACTION_URL);
     wsRef.current = ws;
+    setWs(ws);
 
     // Register close handler for forced logoff
     registerCloseHandler(() => {
@@ -60,6 +64,8 @@ export default function HomeScreen() {
       }
     }, HEARTBEAT_INTERVAL);
 
+    setHeartbeat(heartbeatRef.current); 
+
     ws.onopen = () => {
       setStatus('Connected - sending logon');
       ws.send(JSON.stringify({
@@ -68,8 +74,10 @@ export default function HomeScreen() {
         [JSON_KEY_SUBMITTER]: username,
         [JSON_KEY_PASSWORD]: password,
         [JSON_KEY_IN_SEQ]: 0,
-        [JSON_KEY_BROWSER_SESSION_ID]: bsidRef.current,
+        [JSON_KEY_BROWSER_SESSION_ID]: username,
       }));
+
+      store.dispatch(setBSId(username));
       setStatus('Logon sent');
     };
 
@@ -103,14 +111,6 @@ export default function HomeScreen() {
     };
   }
 
-  setTimeout(() => {
-    const state = require('../src/redux/store').store.getState();
-    console.log('[STATE] seq:', state.globals.seqNum,
-                'role:', state.globals.roleId,
-                'instruments:', Object.keys(state.globals.tableData).length,
-                'tables:', Object.keys(state.tables?.tables ?? {}));
-  }, 5000);
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>CTS Mobile</Text>
@@ -122,6 +122,13 @@ export default function HomeScreen() {
           secureTextEntry value={password} onChangeText={setPassword} />
         <TouchableOpacity style={styles.button} onPress={handleLogin}>
           <Text style={styles.buttonText}>Login</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.button} onPress={() => {
+            require('../src/services/logout').handleLogout();
+            setStatus('Logged out');
+            setLoggedOn(false);
+          }}>
+          <Text style={styles.buttonText}>Logout (debug)</Text>
         </TouchableOpacity>
         <Text style={styles.status}>Status: {status}</Text>
         {loggedOn && <Text style={styles.status}>Logged on ✅</Text>}

@@ -21,6 +21,7 @@ export interface GlobalsState {
   selectedInstrument: InstrumentRow | null;
   instrumentsLoaded: boolean;
   usersLoaded: boolean;
+  bsid: string;
   tsConnected: boolean;
   force_password_change: boolean;
   ordersRequest: boolean;
@@ -40,6 +41,7 @@ const initialState: GlobalsState = {
   selectedInstrument: null,
   instrumentsLoaded: false,
   usersLoaded: false,
+  bsid: "XXX",
   tsConnected: false,
   force_password_change: false,
   ordersRequest: false,
@@ -66,6 +68,9 @@ const globalsSlice = createSlice({
     },
     setUsersLoaded: (state, action: PayloadAction<boolean>) => {
       state.usersLoaded = action.payload;
+    },
+    setBSId: (state, action: PayloadAction<string>) => {
+      state.bsid = action.payload;
     },
     setOrdersRequest: (state, action: PayloadAction<boolean>) => {
       state.ordersRequest = action.payload;
@@ -130,6 +135,7 @@ export const {
   setSeqNum,
   incrementSeqNum,
   setRoleId,
+  setBSId,
   setIsMarketController,
   setTSUserId,
   setDFUserId,
@@ -146,6 +152,7 @@ export const selectSeqNum = (state: RootState) => state.globals.seqNum;
 export const selectRoleId = (state: RootState) => state.globals.roleId;
 export const selectInstrumentsLoaded = (state: RootState) => state.globals.instrumentsLoaded;
 export const selectUsersLoaded = (state: RootState) => state.globals.usersLoaded;
+export const selectBSId = (state: RootState) => state.globals.bsid;
 export const selectOrdersRequest = (state: RootState) => state.globals.ordersRequest;
 export const selectOrderPair = (state: RootState) => state.globals.orderPair;
 export const selectTradesRequest = (state: RootState) => state.globals.tradesRequest;

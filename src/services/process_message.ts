@@ -169,7 +169,6 @@ export function ProcessMessage(
          case SUCCESS_REPLY:
             switch (json_message.orig_m_type) {
                case MSGTYPE_TS_LOGON: {
-                  dispatch(resetGlobals());  
                   dispatch({ type: 'tables/resetTables' });
                   const [seqString, roleIdString, flag] = json_message.tx.split('|');
                   const sequenceNumber = Number(seqString);
@@ -204,6 +203,9 @@ export function ProcessMessage(
 
                case MSGTYPE_TS_LOGOFF:
                   setLoggedOn(false);
+                  closeTSConnection();
+                  dispatch(resetGlobals());
+                  dispatch({ type: 'tables/resetTables' });
                   break;
 
 
@@ -211,11 +213,6 @@ export function ProcessMessage(
                   console.log('Successful changed password');
                   HandleSuccessResult(`Successfully changed password`, true);
                   setLoggedOn(true);
-                  break;
-
-               case MSGTYPE_TS_LOGOFF:
-                  // console.log('Successful logoff, closing WebSocket connection');
-                  setLoggedOn(false);
                   break;
 
                case MSGTYPE_EXCHANGE_CHANGE_STATUS:
