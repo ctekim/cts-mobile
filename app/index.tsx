@@ -14,6 +14,8 @@ import { registerCloseHandler } from '../src/services/ts_connection';
 import { resetGlobals, setBSId, setTSUserId } from '../src/redux/globalsSlice';
 import { DebugPanel } from '../src/components/DebugPanel';
 import { setWs, setHeartbeat } from '../src/services/ws_state';
+import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 
 const TRANSACTION_URL = 'ws://192.168.56.100:9401';
 const HEARTBEAT_INTERVAL = 20000;
@@ -26,9 +28,13 @@ export default function HomeScreen() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // const bsidRef = useRef(
-  //   'mobile-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 10)
-  // );
+  const router = useRouter(); 
+
+  useEffect(() => {
+    if (loggedOn) {
+      router.replace('/instruments');
+    }
+  }, [loggedOn, router]);
 
   function handleLogin() {
     if (!username || !password) {
