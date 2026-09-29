@@ -12,6 +12,7 @@ import { store } from '../src/redux/store';
 import { ProcessMessage } from '../src/services/process_message';
 import { registerCloseHandler } from '../src/services/ts_connection';
 import { setTSUserId } from '../src/redux/globalsSlice';
+import { DebugPanel } from '../src/components/DebugPanel';
 
 const TRANSACTION_URL = 'ws://192.168.56.100:9401';
 const HEARTBEAT_INTERVAL = 20000;
@@ -117,6 +118,7 @@ export default function HomeScreen() {
         <Text style={styles.status}>Status: {status}</Text>
         {loggedOn && <Text style={styles.status}>Logged on ✅</Text>}
       </View>
+      {__DEV__ && <DebugPanel />}
     </View>
   );
 }

@@ -1,6 +1,6 @@
 // import Swal from 'sweetalert2';
 import { Alert } from 'react-native';
-import { DispatchTableEvent } from '../common/events';
+// import { DispatchTableEvent } from '../common/events';
 // import { v4 as uuidv4 } from 'uuid';
 
 // json message types
@@ -1429,19 +1429,19 @@ export const ShowSuccess = (msg: string, _bgColor: string = '#14532d'): void => 
   Alert.alert('Success', msg);
 };
 
-export function HandleSuccessResult(message: string, showInfo: boolean = false): void {
-  const result = {
-    [JSON_KEY_TIME]: GetFormattedTimestamp(),
-    [JSON_KEY_MESSAGE]: message,
-    [JSON_KEY_RESULTS_TYPE]: RESULTS_TYPE_REPLY_SUCCESS,
-  };
+// export function HandleSuccessResult(message: string, showInfo: boolean = false): void {
+//   const result = {
+//     [JSON_KEY_TIME]: GetFormattedTimestamp(),
+//     [JSON_KEY_MESSAGE]: message,
+//     [JSON_KEY_RESULTS_TYPE]: RESULTS_TYPE_REPLY_SUCCESS,
+//   };
 
-  DispatchTableEvent(ADD_ROW, RESULTS_TABLE, result);
+//   DispatchTableEvent(ADD_ROW, RESULTS_TABLE, result);
 
-  if (showInfo) {
-    ShowInfo(message, SUCCESS_BACKGROUND_COLOUR);
-  }
-}
+//   if (showInfo) {
+//     ShowInfo(message, SUCCESS_BACKGROUND_COLOUR);
+//   }
+// }
 
 // /**
 //  * Shows a generic confirmation dialog using SweetAlert2.

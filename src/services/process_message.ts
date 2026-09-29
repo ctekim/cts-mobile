@@ -67,7 +67,7 @@ import { MSG_TYPE_EXCHANGE_REPLY, MSG_TYPE_MARKET_REPLY, MSGTYPE_HEARTBEAT, MSGT
             MSG_TYPE_CHANGE_BACKUP,
             MSG_TYPE_CHANGE_COORDINATOR,
             MSG_TYPE_USER_FORCE_LOGOFF,
-        } from '../common/msg_types.js';
+        } from '../common/msg_types';
 
 import { setForcePasswordChange, setIsMarketController, setRoleId, setSeqNum} from '..//redux/globalsSlice';
 import { closeTSConnection } from './ts_connection';

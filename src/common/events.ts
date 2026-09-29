@@ -1,34 +1,36 @@
-// src/common/events.ts
-import { store } from '../redux/store';
-import { addRow, updateRow, deleteRow } from '../redux/tablesSlice';
-import { addOrUpdateInstrumentRow, deleteInstrumentRow } from '../redux/globalsSlice';
-import {
-  ADD_ROW, UPDATE_ROW, DELETE_ROW,
-  INSTRUMENTS_TABLE,
-} from './common';
+// src/common/events.ts — no store import
+import { ADD_ROW, UPDATE_ROW, DELETE_ROW, INSTRUMENTS_TABLE } from './common';
+
+type Dispatcher = (action: any) => void;
+
+let dispatcher: Dispatcher | null = null;
+
+export function registerEventDispatcher(fn: Dispatcher) {
+  dispatcher = fn;
+}
 
 export function DispatchTableEvent(action: string, tableName: string, data: any) {
-  // Instruments live in globalsSlice.tableData keyed by code
+  if (!dispatcher) {
+    console.warn('[events] dispatcher not registered yet — dropping', action, tableName);
+    return;
+  }
+
   if (tableName === INSTRUMENTS_TABLE) {
     if (action === ADD_ROW || action === UPDATE_ROW) {
-      store.dispatch(addOrUpdateInstrumentRow(data));
+      dispatcher({ type: 'globals/addOrUpdateInstrumentRow', payload: data });
     } else if (action === DELETE_ROW) {
-      store.dispatch(deleteInstrumentRow({ code: data.code }));
+      dispatcher({ type: 'globals/deleteInstrumentRow', payload: { code: data.code } });
     }
     return;
   }
 
-  // Everything else goes into the generic tables slice
   if (action === ADD_ROW) {
-    store.dispatch(addRow({ table: tableName, row: data }));
+    dispatcher({ type: 'tables/addRow', payload: { table: tableName, row: data } });
   } else if (action === UPDATE_ROW) {
-    store.dispatch(updateRow({ table: tableName, row: data }));
+    dispatcher({ type: 'tables/updateRow', payload: { table: tableName, row: data } });
   } else if (action === DELETE_ROW) {
-    store.dispatch(deleteRow({ table: tableName, row: data }));
-  } else {
-    console.log('[DispatchTableEvent] unknown action:', action, tableName);
+    dispatcher({ type: 'tables/deleteRow', payload: { table: tableName, row: data } });
   }
 }
 
-// Keep these no-ops for now — code that imports them still compiles
 export function RegisterTableEvent(_listener: any) { return () => {}; }
