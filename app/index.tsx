@@ -103,6 +103,14 @@ export default function HomeScreen() {
     };
   }
 
+  setTimeout(() => {
+    const state = require('../src/redux/store').store.getState();
+    console.log('[STATE] seq:', state.globals.seqNum,
+                'role:', state.globals.roleId,
+                'instruments:', Object.keys(state.globals.tableData).length,
+                'tables:', Object.keys(state.tables?.tables ?? {}));
+  }, 5000);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>CTS Mobile</Text>

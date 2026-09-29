@@ -69,7 +69,7 @@ import { MSG_TYPE_EXCHANGE_REPLY, MSG_TYPE_MARKET_REPLY, MSGTYPE_HEARTBEAT, MSGT
             MSG_TYPE_USER_FORCE_LOGOFF,
         } from '../common/msg_types';
 
-import { setForcePasswordChange, setIsMarketController, setRoleId, setSeqNum} from '..//redux/globalsSlice';
+import { resetGlobals, setForcePasswordChange, setIsMarketController, setRoleId, setSeqNum} from '..//redux/globalsSlice';
 import { closeTSConnection } from './ts_connection';
 
 export interface ProcessCallbacks {
@@ -169,6 +169,8 @@ export function ProcessMessage(
          case SUCCESS_REPLY:
             switch (json_message.orig_m_type) {
                case MSGTYPE_TS_LOGON: {
+                  dispatch(resetGlobals());  
+                  dispatch({ type: 'tables/resetTables' });
                   const [seqString, roleIdString, flag] = json_message.tx.split('|');
                   const sequenceNumber = Number(seqString);
                   const roleId = Number(roleIdString);

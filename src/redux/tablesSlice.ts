@@ -38,6 +38,9 @@ const tablesSlice = createSlice({
     clearTable: (state, action: PayloadAction<string>) => {
       state.tables[action.payload] = [];
     },
+    resetTables: (state) => {
+      state.tables = {};
+    },
   },
 });
 
