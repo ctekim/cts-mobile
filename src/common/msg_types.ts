@@ -108,7 +108,7 @@ export const MSGTYPE_NAME_NAME_USER_CREATE   = 'MSGTYPE_USER_CREATE'
 export const MSGTYPE_NAME_DF_LOGON           = 'MSGTYPE_DF_LOGON'
 export const MSGTYPE_NAME_DF_LOGOFF          = 'MSGTYPE_DF_LOGOFF'
 
-export const TranslateMsgType = (type) => {
+export const TranslateMsgType = (type: number) => {
    console.log('TranslateMsgType type: ', type);
    switch (type) {
       case MSGTYPE_HEARTBEAT:
