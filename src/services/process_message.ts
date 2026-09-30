@@ -69,7 +69,7 @@ import { MSG_TYPE_EXCHANGE_REPLY, MSG_TYPE_MARKET_REPLY, MSGTYPE_HEARTBEAT, MSGT
             MSG_TYPE_USER_FORCE_LOGOFF,
         } from '../common/msg_types';
 
-import { resetGlobals, setForcePasswordChange, setIsMarketController, setRoleId, setSeqNum} from '..//redux/globalsSlice';
+import { resetGlobals, setForcePasswordChange, setIsMarketController, setRoleId, setSeqNum, setTSConnected} from '..//redux/globalsSlice';
 import { closeTSConnection } from './ts_connection';
 
 export interface ProcessCallbacks {
@@ -101,7 +101,7 @@ export function ProcessMessage(
    const { cmd, m_type } = json_message;
    let result: any = null;
 
-   console.log('[ProcessMessage] m_type:', m_type, 'cmd:', cmd, 'userId:', userId, 'isMarketController:', isMarketController, ', msg: ', json_message);
+   // console.log('[ProcessMessage] m_type:', m_type, 'cmd:', cmd, 'userId:', userId, 'isMarketController:', isMarketController, ', msg: ', json_message);
 
    if (m_type) {
       switch (json_message.m_type) {
@@ -189,6 +189,9 @@ export function ProcessMessage(
                   ));
                   }
 
+                  console.log('[ProcessMessage] logon success, flag =', flag, 'is FORCE_CHANGE?', flag === FORCE_CHANGE_PASSWORD);
+                  console.log('[ProcessMessage] dispatching setTSConnected(true)');
+                  dispatch(setTSConnected(true));  
                   dispatch(loadPanelPositionsForUser(userId, getDefaultLayout()));
                   dispatch(setSeqNum(sequenceNumber));
                   HandleSuccessResult(`Logon OK. Next seq: ${sequenceNumber}`);

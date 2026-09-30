@@ -31,7 +31,9 @@ export default function HomeScreen() {
   const router = useRouter(); 
 
   useEffect(() => {
+    // console.log('[index] XXXXXXXX loggedOn changed:', loggedOn);
     if (loggedOn) {
+      // console.log('[index] XXXXXXXX navigating to /instruments');
       router.replace('/instruments');
     }
   }, [loggedOn, router]);
@@ -111,7 +113,8 @@ export default function HomeScreen() {
       setStatus('Connection error');
     };
 
-    ws.onclose = () => {
+    ws.onclose = (e: CloseEvent) => {
+      console.log('[WS CLOSED]', e.code, e.reason, 'wasClean:', e.wasClean);
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       setStatus('Disconnected');
     };
@@ -129,17 +132,10 @@ export default function HomeScreen() {
         <TouchableOpacity style={styles.button} onPress={handleLogin}>
           <Text style={styles.buttonText}>Login</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={() => {
-            require('../src/services/logout').handleLogout();
-            setStatus('Logged out');
-            setLoggedOn(false);
-          }}>
-          <Text style={styles.buttonText}>Logout (debug)</Text>
-        </TouchableOpacity>
         <Text style={styles.status}>Status: {status}</Text>
         {loggedOn && <Text style={styles.status}>Logged on ✅</Text>}
       </View>
-      {__DEV__ && <DebugPanel />}
+      {/* {__DEV__ && <DebugPanel />} */}
     </View>
   );
 }
