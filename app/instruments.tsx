@@ -12,23 +12,28 @@ import {
   INSTRUMENT_TYPE_CURRENCY,
   INSTRUMENT_TYPE_CRYPTO_CURRENCY,
 } from '../src/common/common';
-import { formatPrice, formatQty } from '../src/common/format';
+import { formatPrice, formatQty, formatStatus } from '../src/common/format';
+import { DarkTheme } from '../src/common/theme';
 
 const CODE_WIDTH = 90;
 const ROW_HEIGHT = 36;
 
 const COLUMNS = [
-  { key: 'last',  label: 'Last',  width: 95,  format: 'price' as const },
-  { key: 'prev',  label: 'Prev',  width: 95,  format: 'price' as const },
-  { key: 'open',  label: 'Open',  width: 95,  format: 'price' as const },
-  { key: 'high',  label: 'High',  width: 95,  format: 'price' as const },
-  { key: 'low',   label: 'Low',   width: 95,  format: 'price' as const },
-  { key: 'close', label: 'Close', width: 95,  format: 'price' as const },
-  { key: 'vwap',  label: 'VWAP',  width: 95,  format: 'price' as const },
-  { key: 'vol',   label: 'Volume',   width: 110, format: 'qty'   as const },
-  { key: 'val',   label: 'Value', width: 130, format: 'price' as const },
-  { key: 'num_trd', label: 'Trades', width: 80, format: 'qty' as const },
-  { key: 'market',  label: 'Market', width: 100, format: 'text' as const },
+  { key: 'last',    label: 'Last',        width: 95,  format: 'price' as const },
+  { key: 'prev',    label: 'Prev',        width: 95,  format: 'price' as const },
+  { key: 'open',    label: 'Open',        width: 95,  format: 'price' as const },
+  { key: 'high',    label: 'High',        width: 95,  format: 'price' as const },
+  { key: 'low',     label: 'Low',         width: 95,  format: 'price' as const },
+  { key: 'vwap',    label: 'VWAP',        width: 95,  format: 'price' as const },
+  { key: 'close',   label: 'Close',       width: 95,  format: 'price' as const },
+  { key: 'vol',     label: 'Volume',      width: 110, format: 'qty'   as const },
+  { key: 'val',     label: 'Value',       width: 130, format: 'price' as const },
+  { key: 'num_trd', label: 'Trades',      width: 80,  format: 'qty'   as const },
+  { key: 'descr',   label: 'Description', width: 120, format: 'text'  as const },
+  { key: 'market',  label: 'Market',      width: 95,  format: 'text'  as const },
+  { key: 'issue',   label: 'Issue Qty',   width: 95,  format: 'price' as const },
+  { key: 'ref',     label: 'Reference',   width: 95,  format: 'price' as const },
+  { key: 'status',  label: 'Status',      width: 95,  format: 'status' as const },
 ];
 
 type ColumnDef = typeof COLUMNS[number];
@@ -79,26 +84,42 @@ export default function InstrumentsScreen() {
     if (raw === null || raw === undefined) return '';
 
     switch (col.format) {
-      case 'price':
-        return formatPrice(raw, item.price_dec ?? 0);
-      case 'qty':
-        return formatQty(raw, item.qty_dec ?? 0);
+      case 'price':  return formatPrice(raw, item.price_dec ?? 0);
+      case 'qty':    return formatQty(raw, item.qty_dec ?? 0);
+      case 'status': return formatStatus(raw);
       case 'text':
-      default:
-        return String(raw);
+      default:       return String(raw);
     }
+  };
+
+  // ---- Cell color (for Last column up/down) ----
+  const cellColor = (item: any, col: ColumnDef): string => {
+    if (col.key !== 'last') return DarkTheme.text;
+
+    const last = Number(String(item.last ?? '').replace(/,/g, ''));
+    const prev = Number(String(item.prev ?? '').replace(/,/g, ''));
+    if (isNaN(last) || isNaN(prev)) return DarkTheme.text;
+    if (last > prev) return DarkTheme.positive;
+    if (last < prev) return DarkTheme.negative;
+    return DarkTheme.neutral;
   };
 
   const renderCodeCell = ({ item, index }: { item: any; index: number }) => (
     <Pressable
       style={({ pressed }) => [
         styles.codeCell,
-        index % 2 === 1 && styles.zebraRow,
-        pressed && styles.rowPressed,
+        {
+          backgroundColor: index % 2 === 1
+            ? DarkTheme.surfaceAlt
+            : DarkTheme.surface,
+          borderBottomColor: DarkTheme.cellBorder,
+          borderRightColor: DarkTheme.codeColumnBorder,
+        },
+        pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
       onPress={() => console.log('[instruments] tapped:', item.code)}
     >
-      <Text style={styles.codeText} numberOfLines={1}>
+      <Text style={[styles.codeText, { color: DarkTheme.text }]} numberOfLines={1}>
         {item.code ?? ''}
       </Text>
     </Pressable>
@@ -108,8 +129,12 @@ export default function InstrumentsScreen() {
     <Pressable
       style={({ pressed }) => [
         styles.dataRow,
-        index % 2 === 1 && styles.zebraRow,
-        pressed && styles.rowPressed,
+        {
+          backgroundColor: index % 2 === 1
+            ? DarkTheme.surfaceAlt
+            : DarkTheme.surface,
+        },
+        pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
       onPress={() => console.log('[instruments] tapped:', item.code)}
     >
@@ -118,8 +143,13 @@ export default function InstrumentsScreen() {
           key={col.key}
           style={[
             styles.dataCell,
-            { width: col.width },
-            col.format !== 'text' && styles.num,
+            {
+              width: col.width,
+              borderRightColor: DarkTheme.cellBorder,
+              borderBottomColor: DarkTheme.cellBorder,
+              color: cellColor(item, col),
+            },
+            (col.format === 'price' || col.format === 'qty') && styles.num,
           ]}
           numberOfLines={1}
         >
@@ -130,17 +160,32 @@ export default function InstrumentsScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: DarkTheme.background }]}>
+      {/* Toolbar */}
       <View style={styles.toolbar}>
-        <Text style={styles.toolbarTitle}>Instruments ({rows.length})</Text>
-        <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
+        <Text style={[styles.toolbarTitle, { color: DarkTheme.text }]}>
+          Instruments ({rows.length})
+        </Text>
+        <TouchableOpacity
+          style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
+          onPress={onLogout}
+        >
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.headerRow}>
-        <View style={[styles.headerCell, styles.codeHeaderCell]}>
-          <Text style={styles.headerText}>Code</Text>
+      {/* Header row */}
+      <View style={[styles.headerRow, { backgroundColor: DarkTheme.headerBg }]}>
+        <View
+          style={[
+            styles.headerCell,
+            styles.codeHeaderCell,
+            { borderRightColor: DarkTheme.codeColumnBorder },
+          ]}
+        >
+          <Text style={[styles.headerText, { color: DarkTheme.headerText }]}>
+            Code
+          </Text>
         </View>
 
         <ScrollView
@@ -154,14 +199,20 @@ export default function InstrumentsScreen() {
           {COLUMNS.map((col) => (
             <View
               key={col.key}
-              style={[styles.headerCell, { width: col.width }]}
+              style={[
+                styles.headerCell,
+                { width: col.width, borderRightColor: DarkTheme.headerBorder },
+              ]}
             >
-              <Text style={styles.headerText}>{col.label}</Text>
+              <Text style={[styles.headerText, { color: DarkTheme.headerText }]}>
+                {col.label}
+              </Text>
             </View>
           ))}
         </ScrollView>
       </View>
 
+      {/* Body */}
       <View style={styles.body}>
         <FlatList
           ref={leftListRef}
@@ -207,7 +258,9 @@ export default function InstrumentsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', paddingTop: 40 },
+  // Only layout, no colors — all colors come from theme inline
+  container: { flex: 1, paddingTop: 40 },
+
   toolbar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -217,7 +270,6 @@ const styles = StyleSheet.create({
   },
   toolbarTitle: { fontSize: 18, fontWeight: 'bold' },
   logoutBtn: {
-    backgroundColor: '#900',
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 6,
@@ -226,7 +278,6 @@ const styles = StyleSheet.create({
 
   headerRow: {
     flexDirection: 'row',
-    backgroundColor: '#222',
     height: ROW_HEIGHT,
   },
   headerScroll: { flex: 1 },
@@ -235,14 +286,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 8,
     borderRightWidth: 1,
-    borderRightColor: '#555',
   },
   codeHeaderCell: {
     width: CODE_WIDTH,
     borderRightWidth: 2,
-    borderRightColor: '#888',
   },
-  headerText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  headerText: { fontWeight: 'bold', fontSize: 12 },
 
   body: { flex: 1, flexDirection: 'row' },
 
@@ -252,17 +301,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
     borderRightWidth: 2,
-    borderRightColor: '#888',
-    backgroundColor: '#fff',
   },
   codeText: { fontSize: 13, fontWeight: '600' },
 
   dataRow: {
     flexDirection: 'row',
     height: ROW_HEIGHT,
-    backgroundColor: '#fff',
   },
   dataCell: {
     height: ROW_HEIGHT,
@@ -270,12 +315,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     fontSize: 12,
     borderRightWidth: 1,
-    borderRightColor: '#e5e5e5',
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
   },
   num: { fontFamily: 'monospace', textAlign: 'right' },
-
-  zebraRow: { backgroundColor: '#f7f7f7' },
-  rowPressed: { backgroundColor: '#e6f2ff' },
 });

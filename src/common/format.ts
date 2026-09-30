@@ -3,6 +3,22 @@
 const priceFormatters = new Map<number, Intl.NumberFormat>();
 const qtyFormatters = new Map<number, Intl.NumberFormat>();
 
+const STATUS_LABELS: Record<string, string> = {
+  A: 'Active',
+  S: 'Suspended',
+  // add others as you encounter them:
+  // I: 'Inactive',
+  // D: 'Delisted',
+  // H: 'Halted',
+  // P: 'Pending',
+};
+
+export function formatStatus(raw: any): string {
+  if (raw === null || raw === undefined) return '';
+  const s = String(raw).trim().toUpperCase();
+  return STATUS_LABELS[s] ?? s;
+}
+
 function getPriceFormatter(dec: number): Intl.NumberFormat {
   let f = priceFormatters.get(dec);
   if (!f) {

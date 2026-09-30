@@ -40,7 +40,7 @@ export const HandleExchangeReply = (cmd: string, json_message: any) => {
 };
 
 export const HandleInstrumentReply = (cmd: string, json_message: any) => {
-    console.log('HandleInstrumentReply called with cmd:', cmd, 'json_message:', json_message);
+    // console.log('HandleInstrumentReply called with cmd:', cmd, 'json_message:', json_message);
     switch (cmd) {
         case CMD_ADD:
                 DispatchTableEvent(ADD_ROW, INSTRUMENTS_TABLE, json_message);
