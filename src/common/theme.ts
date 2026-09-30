@@ -30,8 +30,8 @@ export interface AppColors {
 
 export const DarkTheme: AppColors = {
   background: '#121212',
-  surface: '#1a1a1a',
-  surfaceAlt: '#1f1f1f',
+  surface: '#141414',           
+  surfaceAlt: '#1e1e1e',       
   surfacePressed: '#2a3a4a',
 
   text: '#ffffff',
@@ -47,7 +47,7 @@ export const DarkTheme: AppColors = {
   positive: '#00d26a',
   negative: '#ff4c4c',
   neutral: '#888888',
-  accent: '#208AEF',        // matches your app.json splash color
+  accent: '#208AEF',
   danger: '#a00',
 };
 
