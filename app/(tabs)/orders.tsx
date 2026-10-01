@@ -74,11 +74,14 @@ const COLUMNS: ColumnDef[] = [
 ];
 
 const TOTAL_DATA_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
+const EMPTY_ARRAY: any[] = [];
 
 export default function OrdersScreen() {
   const router = useRouter();
   const connected = useAppSelector(selectTSConnected);
-  const orders = useAppSelector((s: any) => s.tables.tables.UsersOrdersTable ?? []);
+  const orders = useAppSelector(
+    (s: any) => s.tables.tables.UsersOrdersTable ?? EMPTY_ARRAY
+  );  
   const instruments = useAppSelector(selectTableData);
 
   const leftListRef = useRef<FlatList<any>>(null);

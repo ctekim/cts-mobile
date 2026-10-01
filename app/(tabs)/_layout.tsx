@@ -28,13 +28,13 @@ export default function TabsLayout() {
         },
         tabBarActiveTintColor: DarkTheme.codeText,
         tabBarInactiveTintColor: DarkTheme.textMuted,
-        tabBarLabelStyle: { fontSize: 11 },
+        tabBarLabelStyle: { fontSize: 10 },
       }}
     >
       <Tabs.Screen
         name="instruments"
         options={{
-          title: 'Instruments',
+          title: 'Instr',
           tabBarIcon: ({ focused }) => <TabIcon label="📊" focused={focused} />,
         }}
       />
@@ -51,6 +51,27 @@ export default function TabsLayout() {
           title: 'Trades',
           tabBarIcon: ({ focused }) => <TabIcon label="💱" focused={focused} />,
         }}
+      />
+      <Tabs.Screen
+        name="holdings"
+        options={{
+          title: 'Holdings',
+          tabBarIcon: ({ focused }) => <TabIcon label="💼" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: 'Alerts',
+          tabBarIcon: ({ focused }) => <TabIcon label="🔔" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+         name="accounts"
+         options={{
+            title: 'Accts',
+            tabBarIcon: ({ focused }) => <TabIcon label="🏦" focused={focused} />,
+         }}
       />
     </Tabs>
   );

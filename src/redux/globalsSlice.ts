@@ -2,6 +2,7 @@
 import { createSlice, createSelector, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from './store';
 import { ROLE_ID_NOT_SET } from '../common/common';
+import { formatPrice, formatQty } from '../common/format';
 
 // ---- Types ----------------------------------------------------------------
 
@@ -119,6 +120,53 @@ const globalsSlice = createSlice({
       console.log('GlobalsSlice, seqNum:', state.seqNum);
       console.log('GlobalsSlice, roleId:', state.roleId);
     },
+    applyPublicTrade: (state, action: PayloadAction<any>) => {
+      const trade = action.payload;
+      const code = trade.instr;
+      const row = state.tableData[code];
+      if (!row) return;
+      if (trade.stats === false) return;
+
+      const priceDec = row.price_dec ?? 0;
+      const qtyDec   = row.qty_dec   ?? 0;
+
+      // Previous values as raw integers (strip commas, treat as int)
+      const prevVolRaw  = Number(String(row.vol  ?? '0').replace(/,/g, '')) || 0;
+      const prevValRaw  = Number(String(row.val  ?? '0').replace(/,/g, '')) || 0;
+      const prevTrdRaw  = Number(String(row.num_trd ?? '0').replace(/,/g, '')) || 0;
+      const prevHighRaw = row.high ? Number(String(row.high).replace(/,/g, '')) : null;
+      const prevLowRaw  = row.low  ? Number(String(row.low ).replace(/,/g, '')) : null;
+
+      // Incoming trade is already a scaled integer from the server
+      const tradePriceRaw = Number(trade.price) || 0;
+      const tradeQtyRaw   = Number(trade.qty)   || 0;
+
+      // Real-world values (for the arithmetic)
+      const tradePriceReal = tradePriceRaw / Math.pow(10, priceDec);
+      const tradeQtyReal   = tradeQtyRaw   / Math.pow(10, qtyDec);
+
+      // New totals (real-world)
+      const prevVolReal  = prevVolRaw / Math.pow(10, qtyDec);
+      const prevValReal  = prevValRaw / Math.pow(10, priceDec);
+
+      const newVolReal  = prevVolReal + tradeQtyReal;
+      const newValReal  = prevValReal + tradePriceReal * tradeQtyReal;
+      const newVwapReal = newVolReal > 0 ? newValReal / newVolReal : tradePriceReal;
+
+      const prevHighReal = prevHighRaw !== null ? prevHighRaw / Math.pow(10, priceDec) : null;
+      const prevLowReal  = prevLowRaw  !== null ? prevLowRaw  / Math.pow(10, priceDec) : null;
+      const newHighReal  = prevHighReal === null ? tradePriceReal : Math.max(prevHighReal, tradePriceReal);
+      const newLowReal   = prevLowReal  === null ? tradePriceReal : Math.min(prevLowReal,  tradePriceReal);
+
+      // Store back as scaled integers (so formatPrice divides once)
+      row.last    = String(Math.round(tradePriceReal  * Math.pow(10, priceDec)));
+      row.vol     = String(Math.round(newVolReal      * Math.pow(10, qtyDec)));
+      row.val     = String(Math.round(newValReal      * Math.pow(10, priceDec)));
+      row.num_trd = String(prevTrdRaw + 1);
+      row.vwap    = String(Math.round(newVwapReal     * Math.pow(10, priceDec)));
+      row.high    = String(Math.round(newHighReal     * Math.pow(10, priceDec)));
+      row.low     = String(Math.round(newLowReal      * Math.pow(10, priceDec)));
+    },
     resetGlobals: () => initialState,
   },
 });
@@ -144,6 +192,7 @@ export const {
   setForcePasswordChange,
   printGlobalTableData,
   resetGlobals,
+  applyPublicTrade,
 } = globalsSlice.actions;
 
 // ---- Selectors ------------------------------------------------------------

@@ -20,6 +20,7 @@ import {
   PUBLIC_TRADE,
   BUY_SIDE,
 } from '../common/common';
+import { store } from '../redux/store';
 
 export const HandleExchangeReply = (cmd: string, json_message: any) => {
     switch (cmd) {
@@ -160,14 +161,18 @@ export const HandleTradingEventReply = (cmd: string, json_message: any) => {
 };
 
 export const HandlePublicTradesReply = (cmd: string, json_message: any) => {
-   switch (cmd) {
-       case CMD_ADD:
-            DispatchTableEvent(ADD_ROW, PUBLIC_TRADES_TABLE, json_message);
-            const cloned_json_message = { ...json_message }; // cloning because it seems to reference the same data 
-            DispatchTableEvent(PUBLIC_TRADE, INSTRUMENTS_TABLE, cloned_json_message);
-            break;
-       default:
-           console.log('Unknown command in public trades reply:', cmd);
-           break;
-   }
+  switch (cmd) {
+    case CMD_ADD:
+      // Add to the public trades table (existing behavior)
+      DispatchTableEvent(ADD_ROW, PUBLIC_TRADES_TABLE, json_message);
+
+      // Update the instrument's live stats (last, vol, val, vwap, high, low)
+      store.dispatch({
+        type: 'globals/applyPublicTrade',
+        payload: json_message,
+      });
+      break;
+    default:
+      console.log('Unknown command in public trades reply:', cmd);
+  }
 };
