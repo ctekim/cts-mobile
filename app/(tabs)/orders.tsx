@@ -258,7 +258,7 @@ export default function OrdersScreen() {
       >
         <Text style={[styles.orderNumText, { color: DarkTheme.codeText }]} numberOfLines={1}>
           {item.kind === 'latest' && item.childCount > 0
-            ? (item.isExpanded ? '▼ ' : '► ') + String(row.o_num)
+            ? (item.isExpanded ? '▼ ' : '► ') + String(row.o_num) + ` (${item.childCount+1})`
             : String(row.o_num)}
         </Text>
       </Pressable>
