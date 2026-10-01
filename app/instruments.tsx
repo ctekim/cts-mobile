@@ -195,17 +195,24 @@ export default function InstrumentsScreen() {
       <View style={[styles.container, { backgroundColor: DarkTheme.background }]}>
          {/* Toolbar */}
          <View style={styles.toolbar}>
-         <Text style={[styles.toolbarTitle, { color: DarkTheme.text }]}>
-            Instruments ({rows.length})
-         </Text>
-         <TouchableOpacity
-            style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
-            onPress={onLogout}
-         >
-            <Text style={styles.logoutText}>Logout</Text>
-         </TouchableOpacity>
+            <Text style={[styles.toolbarTitle, { color: DarkTheme.text }]}>
+               Instruments ({rows.length})
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+               <TouchableOpacity
+                  style={[styles.navBtn, { backgroundColor: DarkTheme.accent }]}
+                  onPress={() => router.replace('/orders')}
+               >
+                  <Text style={styles.navBtnText}>Orders</Text>
+               </TouchableOpacity>
+               <TouchableOpacity
+                  style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
+                  onPress={onLogout}
+               >
+                  <Text style={styles.logoutText}>Logout</Text>
+               </TouchableOpacity>
+            </View>
          </View>
-
          {/* Header row */}
          <View style={[styles.headerRow, { backgroundColor: DarkTheme.headerBg }]}>
          <View
@@ -290,7 +297,6 @@ export default function InstrumentsScreen() {
    }
 
    const styles = StyleSheet.create({
-   // Only layout, no colors — all colors come from theme inline
    container: { flex: 1, paddingTop: 40 },
 
    toolbar: {
@@ -301,6 +307,14 @@ export default function InstrumentsScreen() {
       paddingVertical: 8,
    },
    toolbarTitle: { fontSize: 18, fontWeight: 'bold' },
+
+   navBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 6,
+   },
+   navBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+
    logoutBtn: {
       paddingHorizontal: 14,
       paddingVertical: 6,
