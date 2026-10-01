@@ -1,5 +1,5 @@
 // app/orders.tsx
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
   StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
@@ -61,7 +61,7 @@ const COLUMNS: ColumnDef[] = [
   { key: 'trdacc',   label: 'Account',    width: 110, format: 'text' },
   { key: 'sess_t',   label: 'Sess Type',    width: 100, format: 'sess_t' },
   { key: 'status',   label: 'Status',     width: 110, format: 'orderstatus' },
-  { key: 'reason',   label: 'Reason',     width: 70,  format: 'reason' },
+  { key: 'reason',   label: 'Reason',     width: 90,  format: 'reason' },
   { key: 'time',     label: 'Time',       width: 180, format: 'text' },
   { key: 'o_flags',  label: 'Flags',      width: 110, format: 'o_flags' },
   { key: 's_type',   label: 'Special',    width: 90,  format: 's_type' },
@@ -83,6 +83,75 @@ export default function OrdersScreen() {
     (s: any) => s.tables.tables.UsersOrdersTable ?? EMPTY_ARRAY
   );  
   const instruments = useAppSelector(selectTableData);
+
+  // Group by o_num, keep all rows, mark which is the latest
+  const grouped = useMemo(() => {
+    const map = new Map<number, any[]>();
+
+    // 1. Bucket rows by o_num
+    orders.forEach((row: any) => {
+      const num = row.o_num;
+      if (!map.has(num)) map.set(num, []);
+      map.get(num)!.push(row);
+    });
+
+    // 2. Sort each bucket by oa_num descending (newest first)
+    const groups = Array.from(map.values()).map((rows) => {
+      rows.sort((a, b) => (b.oa_num ?? 0) - (a.oa_num ?? 0));
+      return {
+        o_num: rows[0].o_num,
+        latest: rows[0],       // highest oa_num
+        all: rows,             // all rows, newest first
+      };
+    });
+
+    // 3. Sort groups by o_num (or by time, your choice)
+    groups.sort((a, b) => b.o_num - a.o_num);
+
+    return groups;
+  }, [orders]);
+
+  const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
+
+  const toggleExpand = (o_num: number) => {
+    setExpandedOrders((prev) => {
+      const next = new Set(prev);
+      if (next.has(o_num)) next.delete(o_num);
+      else next.add(o_num);
+      return next;
+    });
+  };
+
+  // Each item: either a "group header" (latest row) or a "child row" (older rows)
+  const visibleRows = useMemo(() => {
+    const out: any[] = [];
+
+    grouped.forEach((g) => {
+      const isExpanded = expandedOrders.has(g.o_num);
+
+      // Always push the latest row as the group header
+      out.push({
+        kind: 'latest',
+        o_num: g.o_num,
+        isExpanded,
+        childCount: g.all.length - 1,
+        row: g.latest,
+      });
+
+      // If expanded, push all older rows as children
+      if (isExpanded) {
+        g.all.slice(1).forEach((childRow) => {
+          out.push({
+            kind: 'child',
+            o_num: g.o_num,
+            row: childRow,
+          });
+        });
+      }
+    });
+
+    return out;
+  }, [grouped, expandedOrders]);
 
   const leftListRef = useRef<FlatList<any>>(null);
   const headerScrollRef = useRef<ScrollView>(null);
@@ -163,30 +232,43 @@ export default function OrdersScreen() {
   };
 
   // ----- Renderers -----
-  const renderOrderNumCell = ({ item, index }: { item: any; index: number }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.orderNumCell,
-        {
-          backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
-          borderBottomColor: DarkTheme.cellBorder,
-          borderRightColor: DarkTheme.codeColumnBorder,
-        },
-        pressed && { backgroundColor: DarkTheme.surfacePressed },
-      ]}
-      onPress={() => console.log('[orders] tapped:', item.o_num)}
-    >
-      <Text style={[styles.orderNumText, { color: DarkTheme.codeText }]} numberOfLines={1}>
-        {item.o_num ?? ''}
-      </Text>
-    </Pressable>
-  );
+  const renderOrderNumCell = ({ item, index }: { item: any; index: number }) => {
+    const isChild = item.kind === 'child';
+    const row = item.row;
+
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.orderNumCell,
+          {
+            backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
+            borderBottomColor: DarkTheme.cellBorder,
+            borderRightColor: DarkTheme.codeColumnBorder,
+            paddingLeft: isChild ? 24 : 8,   // ← indent child rows
+          },
+          pressed && { backgroundColor: DarkTheme.surfacePressed },
+        ]}
+        onPress={() => {
+          if (item.kind === 'latest' && item.childCount > 0) {
+            toggleExpand(item.o_num);
+          } else {
+            console.log('[orders] tapped:', row.o_num, 'oa:', row.oa_num);
+          }
+        }}
+      >
+        <Text style={[styles.orderNumText, { color: DarkTheme.codeText }]} numberOfLines={1}>
+          {item.kind === 'latest' && item.childCount > 0
+            ? (item.isExpanded ? '▼ ' : '► ') + String(row.o_num)
+            : String(row.o_num)}
+        </Text>
+      </Pressable>
+    );
+  };
 
   const renderDataRow = ({ item, index }: { item: any; index: number }) => {
-    const isUnplaced =
-      String(item.status ?? '').toUpperCase() === 'U';
-    const isCancelled =
-      String(item.status ?? '').toUpperCase() === 'W';
+    const isChild = item.kind === 'child';
+    const row = item.row;
+    const isCancelled = String(row.status ?? '').toUpperCase() === 'W';
 
     return (
       <Pressable
@@ -194,11 +276,17 @@ export default function OrdersScreen() {
           styles.dataRow,
           {
             backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
-            opacity: isCancelled ? 0.6 : 1,
+            opacity: isCancelled ? 0.6 : isChild ? 0.85 : 1,
           },
           pressed && { backgroundColor: DarkTheme.surfacePressed },
         ]}
-        onPress={() => console.log('[orders] tapped:', item.o_num)}
+        onPress={() => {
+          if (item.kind === 'latest' && item.childCount > 0) {
+            toggleExpand(item.o_num);
+          } else {
+            console.log('[orders] tapped:', row.o_num, 'oa:', row.oa_num);
+          }
+        }}
       >
         {COLUMNS.map((col) => (
           <Text
@@ -209,13 +297,13 @@ export default function OrdersScreen() {
                 width: col.width,
                 borderRightColor: DarkTheme.cellBorder,
                 borderBottomColor: DarkTheme.cellBorder,
-                color: cellColor(item, col),
+                color: cellColor(row, col),
               },
               (col.format === 'price' || col.format === 'qty' || col.format === 'int') && styles.num,
             ]}
             numberOfLines={1}
           >
-            {cellText(item, col)}
+            {cellText(row, col)}
           </Text>
         ))}
       </Pressable>
@@ -277,8 +365,12 @@ export default function OrdersScreen() {
         <FlatList
           ref={leftListRef}
           style={{ width: ORDER_NUM_WIDTH, flexGrow: 0 }}
-          data={orders}
-          keyExtractor={(r: any) => String(r.o_num) + '-' + String(r.oa_num ?? 0)}
+          data={visibleRows}
+          keyExtractor={(r: any) =>
+            r.kind === 'latest'
+              ? `order-${r.o_num}-latest`
+              : `order-${r.o_num}-child-${r.row.oa_num ?? 0}`
+          }
           renderItem={renderOrderNumCell}
           getItemLayout={(_, index) => ({
             length: ROW_HEIGHT,
@@ -299,8 +391,12 @@ export default function OrdersScreen() {
         >
           <FlatList
             style={{ width: TOTAL_DATA_WIDTH }}
-            data={orders}
-            keyExtractor={(r: any) => String(r.o_num) + '-' + String(r.oa_num ?? 0)}
+            data={visibleRows}
+            keyExtractor={(r: any) =>
+              r.kind === 'latest'
+                ? `order-${r.o_num}-latest`
+                : `order-${r.o_num}-child-${r.row.oa_num ?? 0}`
+            }
             renderItem={renderDataRow}
             getItemLayout={(_, index) => ({
               length: ROW_HEIGHT,
