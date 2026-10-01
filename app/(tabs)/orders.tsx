@@ -1,24 +1,44 @@
-// app/trades.tsx
+// app/orders.tsx
 import { useRef, useEffect } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
   StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAppSelector } from '../src/redux/hooks';
-import { selectTSConnected, selectTableData } from '../src/redux/globalsSlice';
-import { handleLogout } from '../src/services/logout';
-import { formatPrice, formatQty } from '../src/common/format';
-import { DarkTheme } from '../src/common/theme';
+import { useAppSelector } from '../../src/redux/hooks';
+import { selectTSConnected, selectTableData } from '../../src/redux/globalsSlice';
+import { handleLogout } from '../../src/services/logout';
+import { formatPrice, formatQty } from '../../src/common/format';
+import { DarkTheme } from '../../src/common/theme';
 import {
-  convertReason,        // trade status uses the same converter as order status
+  convertOrderStatus,
+  convertDuration,
+  convertOrderType,
   convertSide,
-} from '../src/common/order_constants';
+  convertSpecialType,
+  convertSessionType,
+  convertTriggerCondition,
+  convertOrderFlags,
+  convertReason,
+} from '../../src/common/order_constants';
 
-const TRADE_NUM_WIDTH = 80;
+const ORDER_NUM_WIDTH = 80;
 const ROW_HEIGHT = 36;
 
-type ColumnFormat = 'text' | 'price' | 'qty' | 'int' | 'side' | 'tradestatus' | 'aggressor';
+type ColumnFormat =
+  | 'text'
+  | 'price'
+  | 'qty'
+  | 'int'
+  | 'side'
+  | 'orderstatus'
+  | 'ordertype'
+  | 'duration'
+  | 's_type'
+  | 'sess_t'
+  | 't_con'
+  | 'reason'
+  | 'o_flags';
 
 interface ColumnDef {
   key: string;
@@ -28,25 +48,37 @@ interface ColumnDef {
 }
 
 const COLUMNS: ColumnDef[] = [
-  { key: 'ta_num',  label: 'Amend',      width: 70,  format: 'int' },
-  { key: 'instr',   label: 'Instrument', width: 100, format: 'text' },
-  { key: 'verb',    label: 'Side',       width: 60,  format: 'side' },
-  { key: 'price',   label: 'Price',      width: 95,  format: 'price' },
-  { key: 'qty',     label: 'Qty',        width: 90,  format: 'qty' },
-  { key: 'o_num',   label: 'Order #',    width: 80,  format: 'int' },
-  { key: 'oa_num',  label: 'Ord Amend',  width: 80,  format: 'int' },
-  { key: 'trdacc',  label: 'Account',    width: 110, format: 'text' },
-  { key: 'status',  label: 'Status',     width: 100, format: 'tradestatus' },
-  { key: 'agr',     label: 'Aggressor',  width: 90,  format: 'aggressor' },
-  { key: 'time',    label: 'Time',       width: 180, format: 'text' },
+  { key: 'oa_num',   label: 'Amend #',    width: 70,  format: 'int' },
+  { key: 'instr',    label: 'Instrument', width: 100, format: 'text' },
+  { key: 'verb',     label: 'Side',       width: 60,  format: 'side' },
+  { key: 'price',    label: 'Price',      width: 95,  format: 'price' },
+  { key: 'orig_qty', label: 'Qty',        width: 90,  format: 'qty' },
+  { key: 'vis_qty',  label: 'Vis Qty',    width: 90,  format: 'qty' },
+  { key: 'tot_bal',  label: 'Balance',    width: 90,  format: 'qty' },
+  { key: 'vis_bal',  label: 'Vis Bal',    width: 90,  format: 'qty' },
+  { key: 'o_type',   label: 'Type',       width: 70,  format: 'ordertype' },
+  { key: 'dur',      label: 'Duration',   width: 90,  format: 'duration' },
+  { key: 'trdacc',   label: 'Account',    width: 110, format: 'text' },
+  { key: 'sess_t',   label: 'Sess Type',    width: 100, format: 'sess_t' },
+  { key: 'status',   label: 'Status',     width: 110, format: 'orderstatus' },
+  { key: 'reason',   label: 'Reason',     width: 70,  format: 'reason' },
+  { key: 'time',     label: 'Time',       width: 180, format: 'text' },
+  { key: 'o_flags',  label: 'Flags',      width: 110, format: 'o_flags' },
+  { key: 's_type',   label: 'Special',    width: 90,  format: 's_type' },
+  { key: 't_con',    label: 'Trig Cond',    width: 130, format: 't_con' },
+  { key: 't_price',  label: 'Trig Price', width: 100, format: 'price' },
+  { key: 't_dur',    label: 'Trig Dur',   width: 90,  format: 'duration' },
+  { key: 'priority', label: 'Priority',   width: 70,  format: 'int' },
+  { key: 'user',     label: 'User',       width: 100, format: 'text' },
+  { key: 'sub',      label: 'Submitter',  width: 100, format: 'text' },
 ];
 
 const TOTAL_DATA_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
 
-export default function TradesScreen() {
+export default function OrdersScreen() {
   const router = useRouter();
   const connected = useAppSelector(selectTSConnected);
-  const trades = useAppSelector((s: any) => s.tables.tables.UsersTradesTable ?? []);
+  const orders = useAppSelector((s: any) => s.tables.tables.UsersOrdersTable ?? []);
   const instruments = useAppSelector(selectTableData);
 
   const leftListRef = useRef<FlatList<any>>(null);
@@ -56,11 +88,11 @@ export default function TradesScreen() {
     if (!connected) router.replace('/');
   }, [connected, router]);
 
-  useEffect(() => {
-    if (trades.length > 0) {
-      console.log('[trades] first row:', JSON.stringify(trades[0], null, 2));
-    }
-  }, [trades.length]);
+//   useEffect(() => {
+//     if (orders.length > 0) {
+//       console.log('[orders] first row:', JSON.stringify(orders[0], null, 2));
+//     }
+//   }, [orders.length]);
 
   const onLogout = () => {
     handleLogout();
@@ -102,8 +134,14 @@ export default function TradesScreen() {
       case 'qty':         return formatQty(raw, qtyDec);
       case 'int':         return String(raw);
       case 'side':        return convertSide(raw);
-      case 'tradestatus': return convertReason(raw);
-      case 'aggressor':   return convertSide(raw);
+      case 'orderstatus': return convertOrderStatus(raw);
+      case 'ordertype':   return convertOrderType(raw);
+      case 'duration':    return convertDuration(raw);
+      case 's_type':      return convertSpecialType(raw);
+      case 'sess_t':      return convertSessionType(raw);
+      case 't_con':       return convertTriggerCondition(raw);
+      case 'o_flags':     return convertOrderFlags(raw);
+      case 'reason':      return convertReason(raw);
       case 'text':
       default:            return String(raw);
     }
@@ -111,23 +149,21 @@ export default function TradesScreen() {
 
   // ----- Cell color -----
   const cellColor = (item: any, col: ColumnDef): string => {
-    if (col.key === 'verb' || col.key === 'agr') {
-      const s = String(item[col.key] ?? '').toUpperCase();
-      if (s === 'B') return DarkTheme.positive;
-      if (s === 'S') return DarkTheme.negative;
-      return DarkTheme.textMuted;   // blank aggressor (auctions)
+    if (col.key === 'verb') {
+      const s = String(item.verb ?? '').toUpperCase();
+      return s === 'B' ? DarkTheme.positive : DarkTheme.negative;
     }
     if (col.key === 'status') {
-      return tradeStatusColor(String(item.status ?? ''));
+      return orderStatusColor(String(item.status ?? ''));
     }
     return DarkTheme.text;
   };
 
   // ----- Renderers -----
-  const renderTradeNumCell = ({ item, index }: { item: any; index: number }) => (
+  const renderOrderNumCell = ({ item, index }: { item: any; index: number }) => (
     <Pressable
       style={({ pressed }) => [
-        styles.tradeNumCell,
+        styles.orderNumCell,
         {
           backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
           borderBottomColor: DarkTheme.cellBorder,
@@ -135,51 +171,59 @@ export default function TradesScreen() {
         },
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
-      onPress={() => console.log('[trades] tapped:', item.t_num)}
+      onPress={() => console.log('[orders] tapped:', item.o_num)}
     >
-      <Text style={[styles.tradeNumText, { color: DarkTheme.codeText }]} numberOfLines={1}>
-        {item.t_num ?? ''}
+      <Text style={[styles.orderNumText, { color: DarkTheme.codeText }]} numberOfLines={1}>
+        {item.o_num ?? ''}
       </Text>
     </Pressable>
   );
 
-  const renderDataRow = ({ item, index }: { item: any; index: number }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.dataRow,
-        {
-          backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
-        },
-        pressed && { backgroundColor: DarkTheme.surfacePressed },
-      ]}
-      onPress={() => console.log('[trades] tapped:', item.t_num)}
-    >
-      {COLUMNS.map((col) => (
-        <Text
-          key={col.key}
-          style={[
-            styles.dataCell,
-            {
-              width: col.width,
-              borderRightColor: DarkTheme.cellBorder,
-              borderBottomColor: DarkTheme.cellBorder,
-              color: cellColor(item, col),
-            },
-            (col.format === 'price' || col.format === 'qty' || col.format === 'int') && styles.num,
-          ]}
-          numberOfLines={1}
-        >
-          {cellText(item, col)}
-        </Text>
-      ))}
-    </Pressable>
-  );
+  const renderDataRow = ({ item, index }: { item: any; index: number }) => {
+    const isUnplaced =
+      String(item.status ?? '').toUpperCase() === 'U';
+    const isCancelled =
+      String(item.status ?? '').toUpperCase() === 'W';
+
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.dataRow,
+          {
+            backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
+            opacity: isCancelled ? 0.6 : 1,
+          },
+          pressed && { backgroundColor: DarkTheme.surfacePressed },
+        ]}
+        onPress={() => console.log('[orders] tapped:', item.o_num)}
+      >
+        {COLUMNS.map((col) => (
+          <Text
+            key={col.key}
+            style={[
+              styles.dataCell,
+              {
+                width: col.width,
+                borderRightColor: DarkTheme.cellBorder,
+                borderBottomColor: DarkTheme.cellBorder,
+                color: cellColor(item, col),
+              },
+              (col.format === 'price' || col.format === 'qty' || col.format === 'int') && styles.num,
+            ]}
+            numberOfLines={1}
+          >
+            {cellText(item, col)}
+          </Text>
+        ))}
+      </Pressable>
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: DarkTheme.background }]}>
       <View style={styles.toolbar}>
         <Text style={[styles.toolbarTitle, { color: DarkTheme.text }]}>
-          Trades ({trades.length})
+          Orders ({orders.length})
         </Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <TouchableOpacity
@@ -188,12 +232,14 @@ export default function TradesScreen() {
           >
             <Text style={styles.navBtnText}>Instruments</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.navBtn, { backgroundColor: DarkTheme.accent }]}
-            onPress={() => router.replace('/orders')}
-          >
-            <Text style={styles.navBtnText}>Orders</Text>
-          </TouchableOpacity>
+            onPress={() => router.replace('/trades')}
+            >
+            <Text style={styles.navBtnText}>Trades</Text>
+         </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
             onPress={onLogout}
@@ -207,11 +253,11 @@ export default function TradesScreen() {
         <View
           style={[
             styles.headerCell,
-            styles.tradeNumHeaderCell,
+            styles.orderNumHeaderCell,
             { borderRightColor: DarkTheme.codeColumnBorder },
           ]}
         >
-          <Text style={[styles.headerText, { color: DarkTheme.headerText }]}>Trade #</Text>
+          <Text style={[styles.headerText, { color: DarkTheme.headerText }]}>Order #</Text>
         </View>
 
         <ScrollView
@@ -241,10 +287,10 @@ export default function TradesScreen() {
       <View style={styles.body}>
         <FlatList
           ref={leftListRef}
-          style={{ width: TRADE_NUM_WIDTH, flexGrow: 0 }}
-          data={trades}
-          keyExtractor={(r: any) => `${r.t_num}-${r.ta_num ?? 0}-${r.verb ?? ''}`}
-          renderItem={renderTradeNumCell}
+          style={{ width: ORDER_NUM_WIDTH, flexGrow: 0 }}
+          data={orders}
+          keyExtractor={(r: any) => String(r.o_num) + '-' + String(r.oa_num ?? 0)}
+          renderItem={renderOrderNumCell}
           getItemLayout={(_, index) => ({
             length: ROW_HEIGHT,
             offset: ROW_HEIGHT * index,
@@ -264,8 +310,8 @@ export default function TradesScreen() {
         >
           <FlatList
             style={{ width: TOTAL_DATA_WIDTH }}
-            data={trades}
-            keyExtractor={(r: any) => `${r.t_num}-${r.ta_num ?? 0}-${r.verb ?? ''}`}
+            data={orders}
+            keyExtractor={(r: any) => String(r.o_num) + '-' + String(r.oa_num ?? 0)}
             renderItem={renderDataRow}
             getItemLayout={(_, index) => ({
               length: ROW_HEIGHT,
@@ -277,7 +323,7 @@ export default function TradesScreen() {
             showsVerticalScrollIndicator
             ListEmptyComponent={
               <Text style={[styles.empty, { color: DarkTheme.textMuted }]}>
-                No trades yet
+                No orders yet
               </Text>
             }
           />
@@ -287,12 +333,29 @@ export default function TradesScreen() {
   );
 }
 
-// ----- Trade status color -----
-function tradeStatusColor(raw: string): string {
+// ----- Status color -----
+function orderStatusColor(raw: string): string {
   switch (raw.toUpperCase()) {
-    case 'M': return DarkTheme.positive;   // Matched
-    case 'T': return DarkTheme.positive;   // Trade
-    default:  return DarkTheme.text;
+    case 'O':                                 // Open
+    case 'N':                                 // New
+      return DarkTheme.positive;
+    case 'A':                                 // Amend
+      return DarkTheme.accent;
+    case 'C':                                 // Change
+      return DarkTheme.accent;
+    case 'W':                                 // Cancelled
+    case 'E':                                 // Expired
+    case 'U':                                 // Unplaced
+      return DarkTheme.textMuted;
+    case 'F':
+    case 'f':
+    case 'r':
+      return DarkTheme.negative;
+    case 'M':                                 // Matched
+    case 'T':                                 // Trade
+      return DarkTheme.positive;
+    default:
+      return DarkTheme.text;
   }
 }
 
@@ -319,20 +382,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRightWidth: 1,
   },
-  tradeNumHeaderCell: { width: TRADE_NUM_WIDTH, borderRightWidth: 2 },
+  orderNumHeaderCell: { width: ORDER_NUM_WIDTH, borderRightWidth: 2 },
   headerText: { fontWeight: 'bold', fontSize: 12 },
 
   body: { flex: 1, flexDirection: 'row' },
 
-  tradeNumCell: {
-    width: TRADE_NUM_WIDTH,
+  orderNumCell: {
+    width: ORDER_NUM_WIDTH,
     height: ROW_HEIGHT,
     justifyContent: 'center',
     paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderRightWidth: 2,
   },
-  tradeNumText: { fontSize: 13, fontWeight: '600' },
+  orderNumText: { fontSize: 13, fontWeight: '600' },
 
   dataRow: { flexDirection: 'row', height: ROW_HEIGHT },
   dataCell: {

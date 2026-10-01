@@ -5,15 +5,15 @@ import {
   StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAppSelector } from '../src/redux/hooks';
-import { selectTableData, selectTSConnected } from '../src/redux/globalsSlice';
-import { handleLogout } from '../src/services/logout';
+import { useAppSelector } from '../../src/redux/hooks';
+import { selectTableData, selectTSConnected } from '../../src/redux/globalsSlice';
+import { handleLogout } from '../../src/services/logout';
 import {
   INSTRUMENT_TYPE_CURRENCY,
   INSTRUMENT_TYPE_CRYPTO_CURRENCY,
-} from '../src/common/common';
-import { formatPrice, formatQty, formatStatus } from '../src/common/format';
-import { DarkTheme } from '../src/common/theme';
+} from '../../src/common/common';
+import { formatPrice, formatQty, formatStatus } from '../../src/common/format';
+import { DarkTheme } from '../../src/common/theme';
 
 const CODE_WIDTH = 90;
 const ROW_HEIGHT = 36;

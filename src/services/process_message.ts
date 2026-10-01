@@ -79,9 +79,17 @@ export interface ProcessCallbacks {
 }
 
 // Small adapter shims so you don't need to rewrite the switch bodies
-const ShowError = (msg: string, _flag?: boolean) => Alert.alert('Error', msg);
-const ShowInfo  = (msg: string, _colour?: string) => Alert.alert('Info', msg);
-const HandleSuccessResult = (msg: string, _flag?: boolean) => console.log('[CTS]', msg);
+const ShowError = (msg: string, _flag?: boolean) => {
+  if (__DEV__) console.warn('[CTS error]', msg);
+  // silent in production; log in dev
+};
+const ShowInfo = (msg: string, _colour?: string) => {
+  if (__DEV__) console.log('[CTS info]', msg);
+};
+const HandleSuccessResult = (msg: string, _flag?: boolean) => {
+  if (__DEV__) console.log('[CTS]', msg);
+  // no toast, no alert — the grid itself is the feedback
+};
 const loadPanelPositionsForUser = (_u: string, _layout: any) => ({ type: 'noop' });
 const getDefaultLayout = () => ({});
 // const clearUserSessionAndTables = () => {};
