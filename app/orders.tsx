@@ -249,7 +249,7 @@ export default function OrdersScreen() {
             { borderRightColor: DarkTheme.codeColumnBorder },
           ]}
         >
-          <Text style={[styles.headerText, { color: DarkTheme.headerText }]}>Ord #</Text>
+          <Text style={[styles.headerText, { color: DarkTheme.headerText }]}>Order #</Text>
         </View>
 
         <ScrollView
