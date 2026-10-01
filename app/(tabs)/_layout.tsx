@@ -73,6 +73,13 @@ export default function TabsLayout() {
             tabBarIcon: ({ focused }) => <TabIcon label="🏦" focused={focused} />,
          }}
       />
+      <Tabs.Screen
+         name="indices"
+         options={{
+            title: 'Indices',
+            tabBarIcon: ({ focused }) => <TabIcon label="📈" focused={focused} />,
+         }}
+      />
     </Tabs>
   );
 }
