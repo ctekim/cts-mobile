@@ -86,10 +86,10 @@ export default function InstrumentsScreen() {
          case 'I':
          case 'D':
          case 'H':
-         return DarkTheme.textMuted;
+            return DarkTheme.textMuted;
          case 'A':
          default:
-         return DarkTheme.text;
+            return DarkTheme.codeText;
       }
    };
 

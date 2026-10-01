@@ -1,37 +1,35 @@
 // src/common/theme.ts
 
 export interface AppColors {
-  // Surfaces
-  background: string;        // main screen background
-  surface: string;           // rows, cards
-  surfaceAlt: string;        // zebra rows
-  surfacePressed: string;    // row pressed state
+  background: string;
+  surface: string;
+  surfaceAlt: string;
+  surfacePressed: string;
 
-  // Text
-  text: string;              // primary
-  textMuted: string;         // labels, secondary
+  text: string;
+  textMuted: string;
 
-  // Header
   headerBg: string;
   headerText: string;
   headerBorder: string;
 
-  // Grid lines
   cellBorder: string;
   codeColumnBorder: string;
 
-  // Semantic
-  positive: string;          // up / green
-  negative: string;          // down / red
-  neutral: string;           // no change
-  accent: string;            // primary buttons (login, etc.)
-  danger: string;            // logout button, errors
+  codeText: string;
+  codeTextSuspended: string;
+
+  positive: string;
+  negative: string;
+  neutral: string;
+  accent: string;
+  danger: string;
 }
 
 export const DarkTheme: AppColors = {
   background: '#121212',
-  surface: '#141414',           
-  surfaceAlt: '#1e1e1e',       
+  surface: '#141414',
+  surfaceAlt: '#1e1e1e',
   surfacePressed: '#2a3a4a',
 
   text: '#ffffff',
@@ -43,6 +41,9 @@ export const DarkTheme: AppColors = {
 
   cellBorder: '#2a2a2a',
   codeColumnBorder: '#444444',
+
+  codeText: '#5DC9E2',
+  codeTextSuspended: '#ff4c4c',
 
   positive: '#00d26a',
   negative: '#ff4c4c',
@@ -66,6 +67,9 @@ export const LightTheme: AppColors = {
 
   cellBorder: '#e5e5e5',
   codeColumnBorder: '#888888',
+
+  codeText: '#0070a0',
+  codeTextSuspended: '#c00',
 
   positive: '#0a7',
   negative: '#c00',
