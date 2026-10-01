@@ -205,6 +205,14 @@ export default function InstrumentsScreen() {
                >
                   <Text style={styles.navBtnText}>Orders</Text>
                </TouchableOpacity>
+               
+               <TouchableOpacity
+                  style={[styles.navBtn, { backgroundColor: DarkTheme.accent }]}
+                  onPress={() => router.replace('/trades')}
+                  >
+                  <Text style={styles.navBtnText}>Trades</Text>
+               </TouchableOpacity>
+      
                <TouchableOpacity
                   style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
                   onPress={onLogout}
