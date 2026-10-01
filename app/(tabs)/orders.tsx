@@ -227,20 +227,6 @@ export default function OrdersScreen() {
         </Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <TouchableOpacity
-            style={[styles.navBtn, { backgroundColor: DarkTheme.accent }]}
-            onPress={() => router.replace('/instruments')}
-          >
-            <Text style={styles.navBtnText}>Instruments</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.navBtn, { backgroundColor: DarkTheme.accent }]}
-            onPress={() => router.replace('/trades')}
-            >
-            <Text style={styles.navBtnText}>Trades</Text>
-         </TouchableOpacity>
-
-          <TouchableOpacity
             style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
             onPress={onLogout}
           >
