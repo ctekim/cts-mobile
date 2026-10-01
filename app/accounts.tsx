@@ -1,20 +1,21 @@
-// app/(tabs)/indices.tsx
+// app/(tabs)/accounts.tsx
 import { useRef, useEffect } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
   StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAppSelector } from '../../src/redux/hooks';
-import { selectTSConnected } from '../../src/redux/globalsSlice';
-import { handleLogout } from '../../src/services/logout';
-import { formatPrice, formatStatus } from '../../src/common/format';
-import { DarkTheme } from '../../src/common/theme';
+import { useAppSelector } from '../src/redux/hooks';
+import { selectTSConnected } from '../src/redux/globalsSlice';
+import { handleLogout } from '../src/services/logout';
+import { formatStatus } from '../src/common/format';
+import { DarkTheme } from '../src/common/theme';
+import { convertTradingAccountType } from '../src/common/trading_account_constants';
 
-const IDX_WIDTH = 110;
+const CODE_WIDTH = 110;
 const ROW_HEIGHT = 36;
 
-type ColumnFormat = 'text' | 'price' | 'status';
+type ColumnFormat = 'text' | 'status' | 'ta_type';
 
 interface ColumnDef {
   key: string;
@@ -24,19 +25,21 @@ interface ColumnDef {
 }
 
 const COLUMNS: ColumnDef[] = [
-  { key: 'price',  label: 'Value',       width: 110, format: 'price' },
-  { key: 'status', label: 'Status',      width: 60, format: 'status' },
-  { key: 'descr',  label: 'Description', width: 200, format: 'text' },
+  { key: 'descr',   label: 'Description', width: 140, format: 'text' },
+  { key: 'firm',    label: 'Firm',        width: 80,  format: 'text' },
+  { key: 'user',    label: 'User',        width: 120, format: 'text' },
+  { key: 'ta_type', label: 'Type',        width: 120, format: 'ta_type' },
+  { key: 'status',  label: 'Status',      width: 100, format: 'status' },
 ];
 
 const TOTAL_DATA_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
 const EMPTY_ARRAY: any[] = [];
 
-export default function IndicesScreen() {
+export default function AccountsScreen() {
   const router = useRouter();
   const connected = useAppSelector(selectTSConnected);
-  const indices = useAppSelector(
-    (s: any) => s.tables.tables.IndicesTable ?? EMPTY_ARRAY
+  const accounts = useAppSelector(
+    (s: any) => s.tables.tables.TradingAccountsTable ?? EMPTY_ARRAY
   );
 
   const leftListRef = useRef<FlatList<any>>(null);
@@ -71,10 +74,10 @@ export default function IndicesScreen() {
     if (raw === null || raw === undefined) return '';
 
     switch (col.format) {
-      case 'price':  return formatPrice(raw, item.price_dec ?? 0);
-      case 'status': return formatStatus(raw);
+      case 'status':  return formatStatus(raw);
+      case 'ta_type': return convertTradingAccountType(raw);
       case 'text':
-      default:       return String(raw);
+      default:        return String(raw);
     }
   };
 
@@ -92,10 +95,10 @@ export default function IndicesScreen() {
   };
 
   // ----- Renderers -----
-  const renderIdxCell = ({ item, index }: { item: any; index: number }) => (
+  const renderCodeCell = ({ item, index }: { item: any; index: number }) => (
     <Pressable
       style={({ pressed }) => [
-        styles.idxCell,
+        styles.codeCell,
         {
           backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
           borderBottomColor: DarkTheme.cellBorder,
@@ -103,10 +106,10 @@ export default function IndicesScreen() {
         },
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
-      onPress={() => console.log('[indices] tapped:', item.idx)}
+      onPress={() => console.log('[accounts] tapped:', item.code)}
     >
-      <Text style={[styles.idxText, { color: DarkTheme.codeText }]} numberOfLines={1}>
-        {item.idx ?? ''}
+      <Text style={[styles.codeText, { color: DarkTheme.codeText }]} numberOfLines={1}>
+        {item.code ?? ''}
       </Text>
     </Pressable>
   );
@@ -120,7 +123,7 @@ export default function IndicesScreen() {
         },
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
-      onPress={() => console.log('[indices] tapped:', item.idx)}
+      onPress={() => console.log('[accounts] tapped:', item.code)}
     >
       {COLUMNS.map((col) => (
         <Text
@@ -133,7 +136,6 @@ export default function IndicesScreen() {
               borderBottomColor: DarkTheme.cellBorder,
               color: cellColor(item, col),
             },
-            col.format === 'price' && styles.num,
           ]}
           numberOfLines={1}
         >
@@ -146,8 +148,11 @@ export default function IndicesScreen() {
   return (
     <View style={[styles.container, { backgroundColor: DarkTheme.background }]}>
       <View style={styles.toolbar}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Text style={[styles.backText, { color: DarkTheme.codeText }]}>‹ Back</Text>
+        </TouchableOpacity>
         <Text style={[styles.toolbarTitle, { color: DarkTheme.text }]}>
-          Indices ({indices.length})
+          Accounts ({accounts.length})
         </Text>
         <TouchableOpacity
           style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
@@ -161,12 +166,12 @@ export default function IndicesScreen() {
         <View
           style={[
             styles.headerCell,
-            styles.idxHeaderCell,
+            styles.codeHeaderCell,
             { borderRightColor: DarkTheme.codeColumnBorder },
           ]}
         >
           <Text style={[styles.headerText, { color: DarkTheme.headerText }]}>
-            Index
+            Code
           </Text>
         </View>
 
@@ -197,10 +202,10 @@ export default function IndicesScreen() {
       <View style={styles.body}>
         <FlatList
           ref={leftListRef}
-          style={{ width: IDX_WIDTH, flexGrow: 0 }}
-          data={indices}
-          keyExtractor={(r: any) => String(r.idx)}
-          renderItem={renderIdxCell}
+          style={{ width: CODE_WIDTH, flexGrow: 0 }}
+          data={accounts}
+          keyExtractor={(r: any) => String(r.code)}
+          renderItem={renderCodeCell}
           getItemLayout={(_, index) => ({
             length: ROW_HEIGHT,
             offset: ROW_HEIGHT * index,
@@ -220,8 +225,8 @@ export default function IndicesScreen() {
         >
           <FlatList
             style={{ width: TOTAL_DATA_WIDTH }}
-            data={indices}
-            keyExtractor={(r: any) => String(r.idx)}
+            data={accounts}
+            keyExtractor={(r: any) => String(r.code)}
             renderItem={renderDataRow}
             getItemLayout={(_, index) => ({
               length: ROW_HEIGHT,
@@ -233,7 +238,7 @@ export default function IndicesScreen() {
             showsVerticalScrollIndicator
             ListEmptyComponent={
               <Text style={[styles.empty, { color: DarkTheme.textMuted }]}>
-                No indices loaded
+                No accounts loaded
               </Text>
             }
           />
@@ -253,6 +258,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   toolbarTitle: { fontSize: 18, fontWeight: 'bold' },
+  backBtn: { paddingVertical: 6, paddingHorizontal: 4, width: 60 },
+  backText: { fontSize: 16, fontWeight: 'bold' },
   logoutBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 },
   logoutText: { color: '#fff', fontWeight: 'bold' },
 
@@ -264,20 +271,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRightWidth: 1,
   },
-  idxHeaderCell: { width: IDX_WIDTH, borderRightWidth: 2 },
+  codeHeaderCell: { width: CODE_WIDTH, borderRightWidth: 2 },
   headerText: { fontWeight: 'bold', fontSize: 12 },
 
   body: { flex: 1, flexDirection: 'row' },
 
-  idxCell: {
-    width: IDX_WIDTH,
+  codeCell: {
+    width: CODE_WIDTH,
     height: ROW_HEIGHT,
     justifyContent: 'center',
     paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderRightWidth: 2,
   },
-  idxText: { fontSize: 13, fontWeight: '600' },
+  codeText: { fontSize: 13, fontWeight: '600' },
 
   dataRow: { flexDirection: 'row', height: ROW_HEIGHT },
   dataCell: {
@@ -288,7 +295,6 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderBottomWidth: 1,
   },
-  num: { fontFamily: 'monospace', textAlign: 'right' },
 
   empty: { textAlign: 'center', marginTop: 40 },
 });

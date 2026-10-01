@@ -197,8 +197,8 @@ export function ProcessMessage(
                   ));
                   }
 
-                  console.log('[ProcessMessage] logon success, flag =', flag, 'is FORCE_CHANGE?', flag === FORCE_CHANGE_PASSWORD);
-                  console.log('[ProcessMessage] dispatching setTSConnected(true)');
+                  // console.log('[ProcessMessage] logon success, flag =', flag, 'is FORCE_CHANGE?', flag === FORCE_CHANGE_PASSWORD);
+                  // console.log('[ProcessMessage] dispatching setTSConnected(true)');
                   dispatch(setTSConnected(true));  
                   dispatch(loadPanelPositionsForUser(userId, getDefaultLayout()));
                   dispatch(setSeqNum(sequenceNumber));

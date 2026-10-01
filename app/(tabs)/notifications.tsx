@@ -24,7 +24,7 @@ const EMPTY_ARRAY: any[] = [];
 function severityColor(severity: any): string {
   switch (severityKey(severity)) {
     case 'info':     return DarkTheme.text;         // white
-    case 'warning':  return '#e0a020';              // amber
+    case 'warning':  return '#e0a020';            // amber
     case 'error':    return DarkTheme.negative;     // red
     case 'critical': return DarkTheme.negative;     // red
     case 'admin':    return DarkTheme.codeText;     // cyan
@@ -162,15 +162,13 @@ export default function NotificationsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: DarkTheme.background }]}>
       <View style={styles.toolbar}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Text style={[styles.backText, { color: DarkTheme.codeText }]}>‹ Back</Text>
+        </TouchableOpacity>
         <Text style={[styles.toolbarTitle, { color: DarkTheme.text }]}>
           Notifications ({notifications.length})
         </Text>
-        <TouchableOpacity
-          style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
-          onPress={onLogout}
-        >
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+        <View style={{ width: 60 }} />  
       </View>
 
       <View style={[styles.headerRow, { backgroundColor: DarkTheme.headerBg }]}>
@@ -272,6 +270,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   toolbarTitle: { fontSize: 18, fontWeight: 'bold' },
+  backBtn: { paddingVertical: 6, paddingHorizontal: 4, width: 60 },
+  backText: { fontSize: 16, fontWeight: 'bold' },
   logoutBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 },
   logoutText: { color: '#fff', fontWeight: 'bold' },
 

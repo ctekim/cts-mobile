@@ -28,57 +28,33 @@ export default function TabsLayout() {
         },
         tabBarActiveTintColor: DarkTheme.codeText,
         tabBarInactiveTintColor: DarkTheme.textMuted,
-        tabBarLabelStyle: { fontSize: 10 },
+        tabBarLabelStyle: { fontSize: 9, marginBottom: 2 },
+        tabBarIconStyle: { marginTop: 2 },
       }}
     >
       <Tabs.Screen
         name="instruments"
-        options={{
-          title: 'Instr',
-          tabBarIcon: ({ focused }) => <TabIcon label="📊" focused={focused} />,
-        }}
+        options={{ title: 'Instr', tabBarIcon: ({ focused }) => <TabIcon label="📊" focused={focused} /> }}
       />
       <Tabs.Screen
         name="orders"
-        options={{
-          title: 'Orders',
-          tabBarIcon: ({ focused }) => <TabIcon label="📋" focused={focused} />,
-        }}
+        options={{ title: 'Orders', tabBarIcon: ({ focused }) => <TabIcon label="📋" focused={focused} /> }}
       />
       <Tabs.Screen
         name="trades"
-        options={{
-          title: 'Trades',
-          tabBarIcon: ({ focused }) => <TabIcon label="💱" focused={focused} />,
-        }}
+        options={{ title: 'Trades', tabBarIcon: ({ focused }) => <TabIcon label="💱" focused={focused} /> }}
       />
       <Tabs.Screen
         name="holdings"
-        options={{
-          title: 'Holdings',
-          tabBarIcon: ({ focused }) => <TabIcon label="💼" focused={focused} />,
-        }}
+        options={{ title: 'Hold', tabBarIcon: ({ focused }) => <TabIcon label="💼" focused={focused} /> }}
       />
       <Tabs.Screen
         name="notifications"
-        options={{
-          title: 'Alerts',
-          tabBarIcon: ({ focused }) => <TabIcon label="🔔" focused={focused} />,
-        }}
+        options={{ title: 'Alerts', tabBarIcon: ({ focused }) => <TabIcon label="🔔" focused={focused} /> }}
       />
       <Tabs.Screen
-         name="accounts"
-         options={{
-            title: 'Accts',
-            tabBarIcon: ({ focused }) => <TabIcon label="🏦" focused={focused} />,
-         }}
-      />
-      <Tabs.Screen
-         name="indices"
-         options={{
-            title: 'Indices',
-            tabBarIcon: ({ focused }) => <TabIcon label="📈" focused={focused} />,
-         }}
+        name="more"
+        options={{ title: 'More', tabBarIcon: ({ focused }) => <TabIcon label="☰" focused={focused} /> }}
       />
     </Tabs>
   );
