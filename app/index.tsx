@@ -31,10 +31,8 @@ export default function HomeScreen() {
   const router = useRouter(); 
 
   useEffect(() => {
-    // console.log('[index] XXXXXXXX loggedOn changed:', loggedOn);
     if (loggedOn) {
-      // console.log('[index] XXXXXXXX navigating to /instruments');
-      router.replace('/instruments');
+      router.replace('/(tabs)/instruments');
     }
   }, [loggedOn, router]);
 
