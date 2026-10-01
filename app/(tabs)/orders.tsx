@@ -314,7 +314,7 @@ export default function OrdersScreen() {
     <View style={[styles.container, { backgroundColor: DarkTheme.background }]}>
       <View style={styles.toolbar}>
         <Text style={[styles.toolbarTitle, { color: DarkTheme.text }]}>
-          Orders ({orders.length})
+          Orders ({grouped.length})
         </Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <TouchableOpacity
