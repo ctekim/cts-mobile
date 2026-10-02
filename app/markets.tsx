@@ -1,42 +1,43 @@
-// app/(tabs)/notifications.tsx
+// app/markets.tsx
 import { useRef, useEffect } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
   StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAppSelector } from '../../src/redux/hooks';
-import { selectTSConnected } from '../../src/redux/globalsSlice';
-import { handleLogout } from '../../src/services/logout';
-import { DarkTheme } from '../../src/common/theme';
-import {
-  convertSeverity,
-  severityKey,
-} from '../../src/common/notification_constants';
+import { useAppSelector } from '../src/redux/hooks';
+import { selectTSConnected, selectIsMarketController } from '../src/redux/globalsSlice';
+import { handleLogout } from '../src/services/logout';
+import { formatStatus } from '../src/common/format';
+import { DarkTheme } from '../src/common/theme';
 
-const ID_WIDTH = 60;
-const ROW_HEIGHT = 44;   // taller rows — messages wrap to 2 lines
-const MESSAGE_WIDTH = 400;
+const CODE_WIDTH = 120;
+const ROW_HEIGHT = 36;
 
-const EMPTY_ARRAY: any[] = [];
+type ColumnFormat = 'text' | 'status';
 
-// Severity → color mapping
-function severityColor(severity: any): string {
-  switch (severityKey(severity)) {
-    case 'info':     return DarkTheme.text;         // white
-    case 'warning':  return '#e0a020';            // amber
-    case 'error':    return DarkTheme.negative;     // red
-    case 'critical': return DarkTheme.negative;     // red
-    case 'admin':    return DarkTheme.codeText;     // cyan
-    default:         return DarkTheme.textMuted;    // gray
-  }
+interface ColumnDef {
+  key: string;
+  label: string;
+  width: number;
+  format: ColumnFormat;
 }
 
-export default function NotificationsScreen() {
+const COLUMNS: ColumnDef[] = [
+  { key: 'exch',   label: 'Exchange',    width: 100, format: 'text' },
+  { key: 'descr',  label: 'Description', width: 260, format: 'text' },
+  { key: 'status', label: 'Status',      width: 100, format: 'status' },
+];
+
+const TOTAL_DATA_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
+const EMPTY_ARRAY: any[] = [];
+
+export default function MarketsScreen() {
   const router = useRouter();
   const connected = useAppSelector(selectTSConnected);
-  const notifications = useAppSelector(
-    (s: any) => s.tables.tables.NotificationsTable ?? EMPTY_ARRAY
+  const isMarketController = useAppSelector(selectIsMarketController);
+  const markets = useAppSelector(
+    (s: any) => s.tables.tables.MarketsTable ?? EMPTY_ARRAY
   );
 
   const leftListRef = useRef<FlatList<any>>(null);
@@ -44,7 +45,8 @@ export default function NotificationsScreen() {
 
   useEffect(() => {
     if (!connected) router.replace('/');
-  }, [connected, router]);
+    else if (!isMarketController) router.replace('/(tabs)/more');
+  }, [connected, isMarketController, router]);
 
   const onLogout = () => {
     handleLogout();
@@ -65,11 +67,33 @@ export default function NotificationsScreen() {
     });
   };
 
-  // ----- Renderers -----
-  const renderIdCell = ({ item, index }: { item: any; index: number }) => (
+  const cellText = (item: any, col: ColumnDef): string => {
+    const raw = item[col.key];
+    if (raw === null || raw === undefined) return '';
+
+    switch (col.format) {
+      case 'status': return formatStatus(raw);
+      case 'text':
+      default:       return String(raw);
+    }
+  };
+
+  const cellColor = (item: any, col: ColumnDef): string => {
+    if (col.key === 'status') {
+      const s = String(item.status ?? '').toUpperCase();
+      switch (s) {
+        case 'A': return DarkTheme.positive;
+        case 'S': return DarkTheme.negative;
+        default:  return DarkTheme.textMuted;
+      }
+    }
+    return DarkTheme.text;
+  };
+
+  const renderCodeCell = ({ item, index }: { item: any; index: number }) => (
     <Pressable
       style={({ pressed }) => [
-        styles.idCell,
+        styles.codeCell,
         {
           backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
           borderBottomColor: DarkTheme.cellBorder,
@@ -77,87 +101,42 @@ export default function NotificationsScreen() {
         },
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
-      onPress={() => console.log('[notifications] tapped:', item.id)}
+      onPress={() => console.log('[markets] tapped:', item.code)}
     >
-      <Text style={[styles.idText, { color: DarkTheme.codeText }]} numberOfLines={1}>
-        {item.id ?? ''}
+      <Text style={[styles.codeText, { color: DarkTheme.codeText }]} numberOfLines={1}>
+        {item.code ?? ''}
       </Text>
     </Pressable>
   );
 
-  const renderDataRow = ({ item, index }: { item: any; index: number }) => {
-    const sevColor = severityColor(item.ser);
-
-    return (
-      <Pressable
-        style={({ pressed }) => [
-          styles.dataRow,
-          {
-            backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
-          },
-          pressed && { backgroundColor: DarkTheme.surfacePressed },
-        ]}
-        onPress={() => console.log('[notifications] tapped:', item.id)}
-      >
-        {/* Time */}
+  const renderDataRow = ({ item, index }: { item: any; index: number }) => (
+    <Pressable
+      style={({ pressed }) => [
+        styles.dataRow,
+        { backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface },
+        pressed && { backgroundColor: DarkTheme.surfacePressed },
+      ]}
+      onPress={() => console.log('[markets] tapped:', item.code)}
+    >
+      {COLUMNS.map((col) => (
         <Text
-          style={[
-            styles.dataCell,
-            { width: 180, borderRightColor: DarkTheme.cellBorder, borderBottomColor: DarkTheme.cellBorder, color: DarkTheme.textMuted },
-          ]}
-          numberOfLines={1}
-        >
-          {item.time ?? ''}
-        </Text>
-
-        {/* Severity */}
-        <Text
+          key={col.key}
           style={[
             styles.dataCell,
             {
-              width: 100,
+              width: col.width,
               borderRightColor: DarkTheme.cellBorder,
               borderBottomColor: DarkTheme.cellBorder,
-              color: sevColor,
-              fontWeight: 'bold',
+              color: cellColor(item, col),
             },
           ]}
           numberOfLines={1}
         >
-          {convertSeverity(item.ser)}
+          {cellText(item, col)}
         </Text>
-
-        {/* User */}
-        <Text
-          style={[
-            styles.dataCell,
-            { width: 100, borderRightColor: DarkTheme.cellBorder, borderBottomColor: DarkTheme.cellBorder, color: DarkTheme.text },
-          ]}
-          numberOfLines={1}
-        >
-          {item.user ?? ''}
-        </Text>
-
-        {/* Message — colored by severity */}
-        <Text
-          style={[
-            styles.dataCell,
-            {
-              width: MESSAGE_WIDTH,
-              borderRightColor: DarkTheme.cellBorder,
-              borderBottomColor: DarkTheme.cellBorder,
-              color: sevColor,
-            },
-          ]}
-          numberOfLines={2}
-        >
-          {item.tx ?? ''}
-        </Text>
-      </Pressable>
-    );
-  };
-
-  const TOTAL_DATA_WIDTH = 180 + 100 + 100 + MESSAGE_WIDTH;
+      ))}
+    </Pressable>
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: DarkTheme.background }]}>
@@ -166,20 +145,25 @@ export default function NotificationsScreen() {
           <Text style={[styles.backText, { color: DarkTheme.codeText }]}>‹ Back</Text>
         </TouchableOpacity>
         <Text style={[styles.toolbarTitle, { color: DarkTheme.text }]}>
-          Notifications ({notifications.length})
+          Markets ({markets.length})
         </Text>
-        <View style={{ width: 60 }} />
+        <TouchableOpacity
+          style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
+          onPress={onLogout}
+        >
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={[styles.headerRow, { backgroundColor: DarkTheme.headerBg }]}>
         <View
           style={[
             styles.headerCell,
-            styles.idHeaderCell,
+            styles.codeHeaderCell,
             { borderRightColor: DarkTheme.codeColumnBorder },
           ]}
         >
-          <Text style={[styles.headerText, { color: DarkTheme.headerText }]}>ID</Text>
+          <Text style={[styles.headerText, { color: DarkTheme.headerText }]}>Code</Text>
         </View>
 
         <ScrollView
@@ -190,12 +174,7 @@ export default function NotificationsScreen() {
           style={styles.headerScroll}
           contentContainerStyle={{ width: TOTAL_DATA_WIDTH }}
         >
-          {[
-            { key: 'time', label: 'Time', width: 180 },
-            { key: 'ser', label: 'Severity', width: 100 },
-            { key: 'user', label: 'User', width: 100 },
-            { key: 'tx', label: 'Message', width: MESSAGE_WIDTH },
-          ].map((col) => (
+          {COLUMNS.map((col) => (
             <View
               key={col.key}
               style={[
@@ -214,10 +193,10 @@ export default function NotificationsScreen() {
       <View style={styles.body}>
         <FlatList
           ref={leftListRef}
-          style={{ width: ID_WIDTH, flexGrow: 0 }}
-          data={notifications}
-          keyExtractor={(r: any) => String(r.id)}
-          renderItem={renderIdCell}
+          style={{ width: CODE_WIDTH, flexGrow: 0 }}
+          data={markets}
+          keyExtractor={(r: any) => String(r.code)}
+          renderItem={renderCodeCell}
           getItemLayout={(_, index) => ({
             length: ROW_HEIGHT,
             offset: ROW_HEIGHT * index,
@@ -237,8 +216,8 @@ export default function NotificationsScreen() {
         >
           <FlatList
             style={{ width: TOTAL_DATA_WIDTH }}
-            data={notifications}
-            keyExtractor={(r: any) => String(r.id)}
+            data={markets}
+            keyExtractor={(r: any) => String(r.code)}
             renderItem={renderDataRow}
             getItemLayout={(_, index) => ({
               length: ROW_HEIGHT,
@@ -250,7 +229,7 @@ export default function NotificationsScreen() {
             showsVerticalScrollIndicator
             ListEmptyComponent={
               <Text style={[styles.empty, { color: DarkTheme.textMuted }]}>
-                No notifications
+                No markets loaded
               </Text>
             }
           />
@@ -283,20 +262,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRightWidth: 1,
   },
-  idHeaderCell: { width: ID_WIDTH, borderRightWidth: 2 },
+  codeHeaderCell: { width: CODE_WIDTH, borderRightWidth: 2 },
   headerText: { fontWeight: 'bold', fontSize: 12 },
 
   body: { flex: 1, flexDirection: 'row' },
 
-  idCell: {
-    width: ID_WIDTH,
+  codeCell: {
+    width: CODE_WIDTH,
     height: ROW_HEIGHT,
     justifyContent: 'center',
     paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderRightWidth: 2,
   },
-  idText: { fontSize: 13, fontWeight: '600' },
+  codeText: { fontSize: 13, fontWeight: '600' },
 
   dataRow: { flexDirection: 'row', height: ROW_HEIGHT },
   dataCell: {

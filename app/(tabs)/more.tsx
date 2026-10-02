@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useAppSelector } from '../../src/redux/hooks';
 import { handleLogout } from '../../src/services/logout';
 import { DarkTheme } from '../../src/common/theme';
+import { selectIsMarketController } from '../../src/redux/globalsSlice';
 
 export default function MoreScreen() {
   const router = useRouter();
@@ -18,10 +19,36 @@ export default function MoreScreen() {
     (s: any) => s.tables.tables.IndicesTable?.length ?? 0
   );
 
+  const userCount = useAppSelector(
+    (s: any) => s.tables.tables.UsersTable?.length ?? 0
+  );
+
+  const firmCount = useAppSelector(
+    (s: any) => s.tables.tables.ParticipantsTable?.length ?? 0
+  );
+
+  const exchangeCount = useAppSelector(
+    (s: any) => s.tables.tables.ExchangesTable?.length ?? 0
+  );
+
+  const tradingEventCount = useAppSelector(
+    (s: any) => s.tables.tables.TradingEventsTable?.length ?? 0
+  );
+
+  const indexMemberCount = useAppSelector(
+    (s: any) => s.tables.tables.IndexMembersTable?.length ?? 0
+  );
+
   const onLogoutPress = () => {
     handleLogout();
     router.replace('/');
   };
+  
+  const marketCount = useAppSelector(
+    (s: any) => s.tables.tables.MarketsTable?.length ?? 0
+  );
+
+  const isSuperUser = useAppSelector(selectIsMarketController);
 
   return (
     <View style={[styles.container, { backgroundColor: DarkTheme.background }]}>
@@ -57,6 +84,95 @@ export default function MoreScreen() {
           )}
           <Text style={[styles.chevron, { color: DarkTheme.textMuted }]}>›</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.row, { borderBottomColor: DarkTheme.cellBorder }]}
+          onPress={() => router.push('/trading_events')}
+        >
+          <Text style={styles.icon}>📅</Text>
+          <Text style={[styles.label, { color: DarkTheme.text }]}>Trading Events</Text>
+          {tradingEventCount > 0 && (
+            <View style={[styles.badge, { backgroundColor: DarkTheme.accent }]}>
+              <Text style={styles.badgeText}>{tradingEventCount}</Text>
+            </View>
+          )}
+          <Text style={[styles.chevron, { color: DarkTheme.textMuted }]}>›</Text>
+        </TouchableOpacity>
+
+        {isSuperUser && (
+          <>
+            <TouchableOpacity
+              style={[styles.row, { borderBottomColor: DarkTheme.cellBorder }]}
+              onPress={() => router.push('/users')}
+            >
+              <Text style={styles.icon}>👥</Text>
+              <Text style={[styles.label, { color: DarkTheme.text }]}>Users</Text>
+              {userCount > 0 && (
+                <View style={[styles.badge, { backgroundColor: DarkTheme.accent }]}>
+                  <Text style={styles.badgeText}>{userCount}</Text>
+                </View>
+              )}
+              <Text style={[styles.chevron, { color: DarkTheme.textMuted }]}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.row, { borderBottomColor: DarkTheme.cellBorder }]}
+              onPress={() => router.push('/firms')}
+            >
+              <Text style={styles.icon}>🏢</Text>
+              <Text style={[styles.label, { color: DarkTheme.text }]}>Firms</Text>
+              {firmCount > 0 && (
+                <View style={[styles.badge, { backgroundColor: DarkTheme.accent }]}>
+                  <Text style={styles.badgeText}>{firmCount}</Text>
+                </View>
+              )}
+              <Text style={[styles.chevron, { color: DarkTheme.textMuted }]}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.row, { borderBottomColor: DarkTheme.cellBorder }]}
+              onPress={() => router.push('/exchanges')}
+            >
+              <Text style={styles.icon}>🌐</Text>
+              <Text style={[styles.label, { color: DarkTheme.text }]}>Exchanges</Text>
+              {exchangeCount > 0 && (
+                <View style={[styles.badge, { backgroundColor: DarkTheme.accent }]}>
+                  <Text style={styles.badgeText}>{exchangeCount}</Text>
+                </View>
+              )}
+              <Text style={[styles.chevron, { color: DarkTheme.textMuted }]}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.row, { borderBottomColor: DarkTheme.cellBorder }]}
+              onPress={() => router.push('/markets')}
+            >
+              <Text style={styles.icon}>🏬</Text>
+              <Text style={[styles.label, { color: DarkTheme.text }]}>Markets</Text>
+              {marketCount > 0 && (
+                <View style={[styles.badge, { backgroundColor: DarkTheme.accent }]}>
+                  <Text style={styles.badgeText}>{marketCount}</Text>
+                </View>
+              )}
+              <Text style={[styles.chevron, { color: DarkTheme.textMuted }]}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.row, { borderBottomColor: DarkTheme.cellBorder }]}
+              onPress={() => router.push('/index_members')}
+            >
+              <Text style={styles.icon}>🧬</Text>
+              <Text style={[styles.label, { color: DarkTheme.text }]}>Index Members</Text>
+              {indexMemberCount > 0 && (
+                <View style={[styles.badge, { backgroundColor: DarkTheme.accent }]}>
+                  <Text style={styles.badgeText}>{indexMemberCount}</Text>
+                </View>
+              )}
+              <Text style={[styles.chevron, { color: DarkTheme.textMuted }]}>›</Text>
+            </TouchableOpacity>
+
+          </>
+        )}
 
         <TouchableOpacity
           style={[styles.row, { borderBottomColor: DarkTheme.cellBorder }]}
