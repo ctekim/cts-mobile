@@ -7,6 +7,9 @@ import {
   ADD_TRADING_ACCOUNT, DELETE_ROW, NOTIFICATIONS_TABLE,
   TRADING_RULES_TABLE, ADD_TRADING_RULES, TRADING_EVENTS_TABLE,
   BIT_MASK_ORDER_PAIR, HasPermission,
+  BIT_MASK_ORDER_REQUEST,
+  BIT_MASK_TRADE_REQUEST,
+  BIT_MASK_HOLDINGS_REQUEST,
 } from '../common/common';
 import {
   setOrdersRequest,
@@ -16,6 +19,7 @@ import {
   setUsersLoaded,
 } from '../redux/globalsSlice';
 import { store } from '../redux/store'; 
+import { Dispatch } from '@reduxjs/toolkit';
 
 export const HandleTradingAccountReply = (cmd: string, json_message: any) => {
     switch (cmd) {
@@ -118,7 +122,7 @@ export const HandleUsersTradesReply = (cmd: string, json_message: any) => {
     }
 };
 
-export const HandleUserReply = (cmd, json_message, isMarketController, dispatch) => {
+export const HandleUserReply = (cmd: string, json_message: any, isMarketController: boolean, dispatch: Dispatch) => {
   switch (cmd) {
     case CMD_ADD: {
       // 1. Always add the row to the table (for the admin Users screen)
@@ -130,28 +134,33 @@ export const HandleUserReply = (cmd, json_message, isMarketController, dispatch)
       if (json_message.code === myUserId && json_message.perm !== undefined) {
         const perm = json_message.perm;
 
-        dispatch(setOrdersRequest(
-          HasPermission(perm, BIT_MASK_ORDER_REQUEST)
-        ));
-        dispatch(setOrderPair(
-          HasPermission(perm, BIT_MASK_ORDER_PAIR)
-        ));
-        dispatch(setTradesRequest(
-          HasPermission(perm, BIT_MASK_TRADE_REQUEST)
-        ));
-        dispatch(setHoldingsRequest(
-          HasPermission(perm, BIT_MASK_HOLDINGS_REQUEST)
-        ));
+        dispatch(setOrdersRequest(HasPermission(perm, BIT_MASK_ORDER_REQUEST)));
+        dispatch(setOrderPair(HasPermission(perm, BIT_MASK_ORDER_PAIR)));
+        dispatch(setTradesRequest(HasPermission(perm, BIT_MASK_TRADE_REQUEST)));
+        dispatch(setHoldingsRequest(HasPermission(perm, BIT_MASK_HOLDINGS_REQUEST)));
         dispatch(setUsersLoaded(true));
 
-        console.log('[permissions] ordersRequest:', HasPermission(perm, BIT_MASK_ORDER_REQUEST),
-                    'tradesRequest:',  HasPermission(perm, BIT_MASK_TRADE_REQUEST),
-                    'holdingsRequest:', HasPermission(perm, BIT_MASK_HOLDINGS_REQUEST),
-                    'orderPair:',      HasPermission(perm, BIT_MASK_ORDER_PAIR));
+        console.log(
+          '[permissions] ordersRequest:', HasPermission(perm, BIT_MASK_ORDER_REQUEST),
+          'tradesRequest:',  HasPermission(perm, BIT_MASK_TRADE_REQUEST),
+          'holdingsRequest:', HasPermission(perm, BIT_MASK_HOLDINGS_REQUEST),
+          'orderPair:',      HasPermission(perm, BIT_MASK_ORDER_PAIR)
+        );
       }
       break;
     }
-    // CMD_UPDATE, CMD_DELETE unchanged
+
+    case CMD_DELETE:
+      console.log('User delete not implemented');
+      break;
+
+    case CMD_UPDATE:
+      DispatchTableEvent(UPDATE_ROW, USERS_TABLE, json_message);
+      break;
+
+    default:
+      console.log('Unknown command in user reply:', cmd);
+      break;
   }
 };
 

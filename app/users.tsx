@@ -38,8 +38,8 @@ const COLUMNS: ColumnDef[] = [
   { key: 'coord',     label: 'Coord',       width: 70,  format: 'yesno' },
   { key: 'back',      label: 'Backup',      width: 70,  format: 'yesno' },
   { key: 'check',     label: 'Check',       width: 70,  format: 'yesno' },
-  { key: 'dro',       label: 'DRO',         width: 70,  format: 'yesno' },
-  { key: 'force_pwd', label: 'Force Pwd',   width: 90,  format: 'yesno' },
+  { key: 'dro',       label: 'Del Ords',    width: 70,  format: 'yesno' },
+  { key: 'force_pwd', label: 'Pwd Chg',   width: 70,  format: 'yesno' },
 ];
 
 const TOTAL_DATA_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);

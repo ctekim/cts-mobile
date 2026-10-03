@@ -11,7 +11,7 @@ import { handleLogout } from '../../src/services/logout';
 import { formatQty, formatStatus } from '../../src/common/format';
 import { DarkTheme } from '../../src/common/theme';
 
-const CODE_WIDTH = 110;
+const CODE_WIDTH = 140;
 const ROW_HEIGHT = 36;
 
 const EMPTY_ARRAY: any[] = [];

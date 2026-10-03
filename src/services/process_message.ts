@@ -71,6 +71,7 @@ import { MSG_TYPE_EXCHANGE_REPLY, MSG_TYPE_MARKET_REPLY, MSGTYPE_HEARTBEAT, MSGT
 
 import { resetGlobals, setForcePasswordChange, setIsMarketController, setRoleId, setSeqNum, setTSConnected} from '..//redux/globalsSlice';
 import { closeTSConnection } from './ts_connection';
+import { Dispatch } from '@reduxjs/toolkit';
 
 export interface ProcessCallbacks {
   onLogonSuccess: (seq: number, roleId: number, forceChangePassword: boolean) => void;
@@ -96,7 +97,7 @@ const getDefaultLayout = () => ({});
 
 export function ProcessMessage(
   json_message: any,
-  dispatch: (action: any) => void,
+  dispatch: Dispatch,
   setLoggedOn: (v: boolean) => void,
   userId: string,
   isMarketController: boolean,

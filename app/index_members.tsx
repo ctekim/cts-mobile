@@ -14,7 +14,7 @@ import { DarkTheme } from '../src/common/theme';
 const IDX_WIDTH = 110;
 const ROW_HEIGHT = 36;
 
-type ColumnFormat = 'text' | 'int' | 'price' | 'status';
+type ColumnFormat = 'text' | 'int' | 'price' | 'status' | 'dec2';
 
 interface ColumnDef {
   key: string;
@@ -25,7 +25,7 @@ interface ColumnDef {
 
 const COLUMNS: ColumnDef[] = [
   { key: 'instr',  label: 'Instrument', width: 140, format: 'text' },
-  { key: 'factor', label: 'Factor',     width: 90,  format: 'int' },
+  { key: 'factor', label: 'Factor',     width: 90,  format: 'dec2' },
   { key: 'issue',  label: 'Issue',      width: 140, format: 'price' },
   { key: 'status', label: 'Status',     width: 100, format: 'status' },
 ];
@@ -84,6 +84,7 @@ export default function IndexMembersScreen() {
 
     switch (col.format) {
       case 'price':  return formatPrice(raw, item.price_dec ?? 0);
+      case 'dec2':   return formatPrice(raw, 2);   // ← always 2 decimals
       case 'int':    return String(raw);
       case 'status': return formatStatus(raw);
       case 'text':
@@ -142,7 +143,7 @@ export default function IndexMembersScreen() {
               borderBottomColor: DarkTheme.cellBorder,
               color: cellColor(item, col),
             },
-            (col.format === 'int' || col.format === 'price') && styles.num,
+            (col.format === 'int' || col.format === 'price' || col.format === 'dec2') && styles.num,
           ]}
           numberOfLines={1}
         >

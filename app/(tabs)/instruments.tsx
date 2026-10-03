@@ -167,7 +167,10 @@ export default function InstrumentsScreen() {
             },
             pressed && { backgroundColor: DarkTheme.surfacePressed },
          ]}
-         onPress={() => console.log('[instruments] tapped:', item.code)}
+         onPress={() => {
+            router.push({ pathname: '/order_book', params: { instr: item.code } });
+         }}
+
          >
          {COLUMNS.map((col) => (
             <Text
