@@ -8,8 +8,14 @@ import {
   TRADING_RULES_TABLE, ADD_TRADING_RULES, TRADING_EVENTS_TABLE,
   BIT_MASK_ORDER_PAIR, HasPermission,
 } from '../common/common';
-import { setOrderPair } from '../redux/globalsSlice.ts';
-
+import {
+  setOrdersRequest,
+  setOrderPair,
+  setTradesRequest,
+  setHoldingsRequest,
+  setUsersLoaded,
+} from '../redux/globalsSlice';
+import { store } from '../redux/store'; 
 
 export const HandleTradingAccountReply = (cmd: string, json_message: any) => {
     switch (cmd) {
@@ -112,32 +118,41 @@ export const HandleUsersTradesReply = (cmd: string, json_message: any) => {
     }
 };
 
-export const HandleUserReply = (cmd: string, json_message: any, isMarketContoller: boolean, dispatch: any) => {
-    // Add error checking at the start
-    if (!json_message) {
-        console.error('HandleUserReply: json_message is undefined', { cmd, json_message, isMarketContoller });
-        return;
-    }
-    
-    switch (cmd) {
-        case CMD_ADD:
-            if (!isMarketContoller && json_message.perm !== undefined) {
-                dispatch(setOrderPair(HasPermission(json_message.perm, BIT_MASK_ORDER_PAIR)));
-            }
+export const HandleUserReply = (cmd, json_message, isMarketController, dispatch) => {
+  switch (cmd) {
+    case CMD_ADD: {
+      // 1. Always add the row to the table (for the admin Users screen)
+      DispatchTableEvent(ADD_ROW, USERS_TABLE, json_message);
+      DispatchTableEvent(ADD_USER, TRADING_ACCOUNTS_TABLE, json_message);
 
-            DispatchTableEvent(ADD_ROW, USERS_TABLE, json_message);
-            DispatchTableEvent(ADD_USER, TRADING_ACCOUNTS_TABLE, json_message);
-            break;
-        case CMD_DELETE:
-            console.log('User delete not implemented');
-            break;
-        case CMD_UPDATE:
-            DispatchTableEvent(UPDATE_ROW, USERS_TABLE, json_message);
-            break;
-        default:
-            console.log('Unknown command in user reply:', cmd);
-            break;
+      // 2. If this is MY user row, extract permissions
+      const myUserId = store.getState().globals.userId;
+      if (json_message.code === myUserId && json_message.perm !== undefined) {
+        const perm = json_message.perm;
+
+        dispatch(setOrdersRequest(
+          HasPermission(perm, BIT_MASK_ORDER_REQUEST)
+        ));
+        dispatch(setOrderPair(
+          HasPermission(perm, BIT_MASK_ORDER_PAIR)
+        ));
+        dispatch(setTradesRequest(
+          HasPermission(perm, BIT_MASK_TRADE_REQUEST)
+        ));
+        dispatch(setHoldingsRequest(
+          HasPermission(perm, BIT_MASK_HOLDINGS_REQUEST)
+        ));
+        dispatch(setUsersLoaded(true));
+
+        console.log('[permissions] ordersRequest:', HasPermission(perm, BIT_MASK_ORDER_REQUEST),
+                    'tradesRequest:',  HasPermission(perm, BIT_MASK_TRADE_REQUEST),
+                    'holdingsRequest:', HasPermission(perm, BIT_MASK_HOLDINGS_REQUEST),
+                    'orderPair:',      HasPermission(perm, BIT_MASK_ORDER_PAIR));
+      }
+      break;
     }
+    // CMD_UPDATE, CMD_DELETE unchanged
+  }
 };
 
 export const HandleParticipantReply = (cmd: string, json_message: any) => {
