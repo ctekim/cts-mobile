@@ -20,8 +20,8 @@ const EMPTY_ARRAY: any[] = [];
 
 // Slim columns for side-by-side view
 const SIDE_COLUMNS = [
-  { key: 'price', label: 'Price', width: 80 },
-  { key: 'qty',   label: 'Qty',   width: 65 },
+  { key: 'price', label: 'Price', width: 95 },
+  { key: 'qty',   label: 'Qty',   width: 85 },
 ];
 
 export default function OrderBookScreen() {

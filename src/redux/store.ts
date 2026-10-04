@@ -2,11 +2,13 @@ import { configureStore } from '@reduxjs/toolkit';
 import globalsReducer from './globalsSlice';
 import tablesReducer from './tablesSlice';
 import { registerEventDispatcher } from '../common/events';   // ← add
+import notificationReducer from './notificationSlice';
 
 export const store = configureStore({
   reducer: {
     globals: globalsReducer,
     tables: tablesReducer,
+    notification: notificationReducer, 
   },
   middleware: (getDefault) =>
     getDefault({

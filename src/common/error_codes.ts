@@ -245,6 +245,7 @@ const ERROR_LISTENING_PORT_NOT_DEFINED           = 1249;
 const ERROR_PROMETHEUS_PORT_NOT_DEFINED          = 1250;
 const ERROR_SCHEDULE_TYPE_NOT_ALLOWED				   = 1251;
 const ERROR_TRIGGER_TYPE_NOT_ALLOWED				   = 1252;
+const ERROR_ORDER_ALREADY_WITHDRAWN              = 1253;
 
 const ERROR_MESSAGE_NOT_A_STRING               = 2000;
 const ERROR_MESSAGE_NOT_AN_INTEGER             = 2001;
@@ -784,6 +785,8 @@ export const TranslateErrorMessage = (error_code: number): string => {
          return "Schedule type not allowed";
       case ERROR_TRIGGER_TYPE_NOT_ALLOWED:
          return "Trigger type not allowed";
+      case ERROR_ORDER_ALREADY_WITHDRAWN:
+         return "Order already withdrawn";
       default:
          // console.log('error code: ', error_code);
          return   "Unknow error code: " + error_code;

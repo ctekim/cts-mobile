@@ -2,12 +2,13 @@
 import { useRef, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
-  StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
+  StyleSheet, NativeSyntheticEvent, NativeScrollEvent, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppSelector } from '../../src/redux/hooks';
 import { selectTSConnected, selectTableData } from '../../src/redux/globalsSlice';
 import { handleLogout } from '../../src/services/logout';
+import { sendCancelOrder } from '../../src/services/order_messages';
 import { formatPrice, formatQty } from '../../src/common/format';
 import { DarkTheme } from '../../src/common/theme';
 import {
@@ -20,7 +21,10 @@ import {
   convertTriggerCondition,
   convertOrderFlags,
   convertReason,
+  ORDER_STATUS_OPEN,
+  ORDER_STATUS_UNPLACED,
 } from '../../src/common/order_constants';
+import { ConfirmDialog } from '../../src/components/ConfirmDialog';
 
 const ORDER_NUM_WIDTH = 80;
 const ROW_HEIGHT = 36;
@@ -38,7 +42,8 @@ type ColumnFormat =
   | 'sess_t'
   | 't_con'
   | 'reason'
-  | 'o_flags';
+  | 'o_flags'
+  | 'pair';
 
 interface ColumnDef {
   key: string;
@@ -59,16 +64,17 @@ const COLUMNS: ColumnDef[] = [
   { key: 'o_type',   label: 'Type',       width: 70,  format: 'ordertype' },
   { key: 'dur',      label: 'Duration',   width: 90,  format: 'duration' },
   { key: 'trdacc',   label: 'Account',    width: 110, format: 'text' },
-  { key: 'sess_t',   label: 'Sess Type',    width: 100, format: 'sess_t' },
+  { key: 'sess_t',   label: 'Sess Type',  width: 100, format: 'sess_t' },
   { key: 'status',   label: 'Status',     width: 110, format: 'orderstatus' },
   { key: 'reason',   label: 'Reason',     width: 90,  format: 'reason' },
   { key: 'time',     label: 'Time',       width: 180, format: 'text' },
   { key: 'o_flags',  label: 'Flags',      width: 110, format: 'o_flags' },
   { key: 's_type',   label: 'Special',    width: 90,  format: 's_type' },
-  { key: 't_con',    label: 'Trig Cond',    width: 130, format: 't_con' },
+  { key: 't_con',    label: 'Trig Cond',  width: 130, format: 't_con' },
   { key: 't_price',  label: 'Trig Price', width: 100, format: 'price' },
   { key: 't_dur',    label: 'Trig Dur',   width: 90,  format: 'duration' },
   { key: 'priority', label: 'Priority',   width: 70,  format: 'int' },
+  { key: 'pair',     label: 'Pair',       width: 70,  format: 'pair' },
   { key: 'user',     label: 'User',       width: 100, format: 'text' },
   { key: 'sub',      label: 'Submitter',  width: 100, format: 'text' },
 ];
@@ -81,33 +87,30 @@ export default function OrdersScreen() {
   const connected = useAppSelector(selectTSConnected);
   const orders = useAppSelector(
     (s: any) => s.tables.tables.UsersOrdersTable ?? EMPTY_ARRAY
-  );  
+  );
   const instruments = useAppSelector(selectTableData);
+  const [cancelTarget, setCancelTarget] = useState<any | null>(null);
 
-  // Group by o_num, keep all rows, mark which is the latest
+  // ----- Group by o_num, keep all rows, mark which is the latest -----
   const grouped = useMemo(() => {
     const map = new Map<number, any[]>();
 
-    // 1. Bucket rows by o_num
     orders.forEach((row: any) => {
       const num = row.o_num;
       if (!map.has(num)) map.set(num, []);
       map.get(num)!.push(row);
     });
 
-    // 2. Sort each bucket by oa_num descending (newest first)
     const groups = Array.from(map.values()).map((rows) => {
       rows.sort((a, b) => (b.oa_num ?? 0) - (a.oa_num ?? 0));
       return {
         o_num: rows[0].o_num,
-        latest: rows[0],       // highest oa_num
-        all: rows,             // all rows, newest first
+        latest: rows[0],
+        all: rows,
       };
     });
 
-    // 3. Sort groups by o_num (or by time, your choice)
     groups.sort((a, b) => b.o_num - a.o_num);
-
     return groups;
   }, [orders]);
 
@@ -122,14 +125,13 @@ export default function OrdersScreen() {
     });
   };
 
-  // Each item: either a "group header" (latest row) or a "child row" (older rows)
+  // Each item: either a "latest" row (group header) or a "child" row (older amends)
   const visibleRows = useMemo(() => {
     const out: any[] = [];
 
     grouped.forEach((g) => {
       const isExpanded = expandedOrders.has(g.o_num);
 
-      // Always push the latest row as the group header
       out.push({
         kind: 'latest',
         o_num: g.o_num,
@@ -138,7 +140,6 @@ export default function OrdersScreen() {
         row: g.latest,
       });
 
-      // If expanded, push all older rows as children
       if (isExpanded) {
         g.all.slice(1).forEach((childRow) => {
           out.push({
@@ -159,12 +160,6 @@ export default function OrdersScreen() {
   useEffect(() => {
     if (!connected) router.replace('/');
   }, [connected, router]);
-
-//   useEffect(() => {
-//     if (orders.length > 0) {
-//       console.log('[orders] first row:', JSON.stringify(orders[0], null, 2));
-//     }
-//   }, [orders.length]);
 
   const onLogout = () => {
     handleLogout();
@@ -214,6 +209,10 @@ export default function OrdersScreen() {
       case 't_con':       return convertTriggerCondition(raw);
       case 'o_flags':     return convertOrderFlags(raw);
       case 'reason':      return convertReason(raw);
+      case 'pair': {
+        const n = Number(raw);
+        return n === 0 || isNaN(n) ? '' : String(n);
+      }
       case 'text':
       default:            return String(raw);
     }
@@ -228,7 +227,19 @@ export default function OrdersScreen() {
     if (col.key === 'status') {
       return orderStatusColor(String(item.status ?? ''));
     }
+    if (col.key === 'pair') {
+      const n = Number(item.pair ?? 0);
+      return n !== 0 ? DarkTheme.accent : DarkTheme.textMuted;
+    }
     return DarkTheme.text;
+  };
+
+  // ----- Cancel handler (shared by frozen cell and data row) -----
+  const handleCancelOrder = (row: any) => {
+    const status = String(row.status ?? '').toUpperCase();
+    const isLive = status === ORDER_STATUS_OPEN || status === ORDER_STATUS_UNPLACED;
+    if (!isLive) return;
+    setCancelTarget(row);
   };
 
   // ----- Renderers -----
@@ -244,7 +255,7 @@ export default function OrdersScreen() {
             backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
             borderBottomColor: DarkTheme.cellBorder,
             borderRightColor: DarkTheme.codeColumnBorder,
-            paddingLeft: isChild ? 24 : 8,   // ← indent child rows
+            paddingLeft: isChild ? 24 : 8,
           },
           pressed && { backgroundColor: DarkTheme.surfacePressed },
         ]}
@@ -255,10 +266,14 @@ export default function OrdersScreen() {
             console.log('[orders] tapped:', row.o_num, 'oa:', row.oa_num);
           }
         }}
+        onLongPress={() => {
+          if (item.kind !== 'latest') return;
+          handleCancelOrder(row);
+        }}
       >
         <Text style={[styles.orderNumText, { color: DarkTheme.codeText }]} numberOfLines={1}>
           {item.kind === 'latest' && item.childCount > 0
-            ? (item.isExpanded ? '▼ ' : '► ') + String(row.o_num) + ` (${item.childCount+1})`
+            ? (item.isExpanded ? '▼ ' : '► ') + String(row.o_num) + ` (${item.childCount + 1})`
             : String(row.o_num)}
         </Text>
       </Pressable>
@@ -286,6 +301,10 @@ export default function OrdersScreen() {
           } else {
             console.log('[orders] tapped:', row.o_num, 'oa:', row.oa_num);
           }
+        }}
+        onLongPress={() => {
+          if (item.kind !== 'latest') return;
+          handleCancelOrder(row);
         }}
       >
         {COLUMNS.map((col) => (
@@ -414,6 +433,38 @@ export default function OrdersScreen() {
           />
         </ScrollView>
       </View>
+      <ConfirmDialog
+        visible={cancelTarget !== null}
+        title={cancelTarget ? `Cancel order ${cancelTarget.o_num}?` : ''}
+        message={
+          cancelTarget
+            ? Number(cancelTarget.pair ?? 0) !== 0
+              ? `${cancelTarget.instr} · ${convertSide(cancelTarget.verb)}\n\nThis is a pair order (paired with #${cancelTarget.pair}). Cancelling will also cancel the paired leg.`
+              : `${cancelTarget.instr} · ${convertSide(cancelTarget.verb)}`
+            : ''
+        }
+        actions={[
+          {
+            label: 'No',
+            style: 'cancel',
+            onPress: () => {},
+          },
+          {
+            label: 'Cancel Order',
+            style: 'destructive',
+            onPress: () => {
+              if (!cancelTarget) return;
+              const pairValue = Number(cancelTarget.pair ?? 0);
+              const isPairOrder = pairValue !== 0;
+              const ok = sendCancelOrder(cancelTarget.o_num, isPairOrder);
+              if (!ok) {
+                Alert.alert('Not connected');
+              }
+            },
+          },
+        ]}
+        onClose={() => setCancelTarget(null)}
+      />
     </View>
   );
 }
@@ -421,23 +472,22 @@ export default function OrdersScreen() {
 // ----- Status color -----
 function orderStatusColor(raw: string): string {
   switch (raw.toUpperCase()) {
-    case 'O':                                 // Open
-    case 'N':                                 // New
+    case 'O':
+    case 'N':
       return DarkTheme.positive;
-    case 'A':                                 // Amend
+    case 'A':
+    case 'C':
       return DarkTheme.accent;
-    case 'C':                                 // Change
-      return DarkTheme.accent;
-    case 'W':                                 // Cancelled
-    case 'E':                                 // Expired
-    case 'U':                                 // Unplaced
+    case 'W':
+    case 'E':
+    case 'U':
       return DarkTheme.textMuted;
     case 'F':
     case 'f':
     case 'r':
       return DarkTheme.negative;
-    case 'M':                                 // Matched
-    case 'T':                                 // Trade
+    case 'M':
+    case 'T':
       return DarkTheme.positive;
     default:
       return DarkTheme.text;

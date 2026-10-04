@@ -72,6 +72,8 @@ import { MSG_TYPE_EXCHANGE_REPLY, MSG_TYPE_MARKET_REPLY, MSGTYPE_HEARTBEAT, MSGT
 import { resetGlobals, setForcePasswordChange, setIsMarketController, setRoleId, setSeqNum, setTSConnected} from '..//redux/globalsSlice';
 import { closeTSConnection } from './ts_connection';
 import { Dispatch } from '@reduxjs/toolkit';
+import { showResult } from '../redux/notificationSlice';
+import { store } from '../redux/store';
 
 export interface ProcessCallbacks {
   onLogonSuccess: (seq: number, roleId: number, forceChangePassword: boolean) => void;
@@ -79,17 +81,31 @@ export interface ProcessCallbacks {
   onLogoff: () => void;
 }
 
-// Small adapter shims so you don't need to rewrite the switch bodies
 const ShowError = (msg: string, _flag?: boolean) => {
   if (__DEV__) console.warn('[CTS error]', msg);
-  // silent in production; log in dev
+  store.dispatch(showResult({
+    type: 'error',
+    message: msg,
+    time: GetFormattedTimestamp(),
+  }));
 };
+
 const ShowInfo = (msg: string, _colour?: string) => {
   if (__DEV__) console.log('[CTS info]', msg);
+  store.dispatch(showResult({
+    type: 'info',
+    message: msg,
+    time: GetFormattedTimestamp(),
+  }));
 };
+
 const HandleSuccessResult = (msg: string, _flag?: boolean) => {
   if (__DEV__) console.log('[CTS]', msg);
-  // no toast, no alert — the grid itself is the feedback
+  store.dispatch(showResult({
+    type: 'success',
+    message: msg,
+    time: GetFormattedTimestamp(),
+  }));
 };
 const loadPanelPositionsForUser = (_u: string, _layout: any) => ({ type: 'noop' });
 const getDefaultLayout = () => ({});
@@ -203,7 +219,8 @@ export function ProcessMessage(
                   dispatch(setTSConnected(true));  
                   dispatch(loadPanelPositionsForUser(userId, getDefaultLayout()));
                   dispatch(setSeqNum(sequenceNumber));
-                  HandleSuccessResult(`Logon OK. Next seq: ${sequenceNumber}`);
+                  // HandleSuccessResult(`Logon OK. Next seq: ${sequenceNumber}`);
+                  HandleSuccessResult(`Logon successful`);
 
                   if (flag === FORCE_CHANGE_PASSWORD) {
                   dispatch(setForcePasswordChange(true));
@@ -462,7 +479,7 @@ export function ProcessMessage(
          break;
 
          default:
-         console.log('Unknown m_type:', json_message.m_type);
+         // console.log('Unknown m_type:', json_message.m_type);
       }
    } else {
       console.log('Missing m_type field');
