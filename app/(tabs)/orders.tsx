@@ -25,6 +25,8 @@ import {
   ORDER_STATUS_UNPLACED,
 } from '../../src/common/order_constants';
 import { ConfirmDialog } from '../../src/components/ConfirmDialog';
+import { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { OrderDetailSheet } from '../../src/components/OrderDetailSheet';
 
 const ORDER_NUM_WIDTH = 80;
 const ROW_HEIGHT = 36;
@@ -90,6 +92,8 @@ export default function OrdersScreen() {
   );
   const instruments = useAppSelector(selectTableData);
   const [cancelTarget, setCancelTarget] = useState<any | null>(null);
+  const sheetRef = useRef<BottomSheetModal>(null);
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
   // ----- Group by o_num, keep all rows, mark which is the latest -----
   const grouped = useMemo(() => {
@@ -260,10 +264,12 @@ export default function OrdersScreen() {
           pressed && { backgroundColor: DarkTheme.surfacePressed },
         ]}
         onPress={() => {
-          if (item.kind === 'latest' && item.childCount > 0) {
+          if (item.childCount > 0 && item.kind === 'latest') {
             toggleExpand(item.o_num);
           } else {
-            console.log('[orders] tapped:', row.o_num, 'oa:', row.oa_num);
+            const latestRow = grouped.find((g) => g.o_num === row.o_num)?.latest ?? row;
+            setSelectedOrder(latestRow);
+            sheetRef.current?.present();
           }
         }}
         onLongPress={() => {
@@ -296,11 +302,9 @@ export default function OrdersScreen() {
           pressed && { backgroundColor: DarkTheme.surfacePressed },
         ]}
         onPress={() => {
-          if (item.kind === 'latest' && item.childCount > 0) {
-            toggleExpand(item.o_num);
-          } else {
-            console.log('[orders] tapped:', row.o_num, 'oa:', row.oa_num);
-          }
+          const latestRow = grouped.find((g) => g.o_num === row.o_num)?.latest ?? row;
+          setSelectedOrder(latestRow);
+          sheetRef.current?.present();
         }}
         onLongPress={() => {
           if (item.kind !== 'latest') return;
@@ -465,6 +469,27 @@ export default function OrdersScreen() {
         ]}
         onClose={() => setCancelTarget(null)}
       />
+      <OrderDetailSheet
+        ref={sheetRef}
+        order={selectedOrder}
+        priceDec={
+          selectedOrder ? Number(instruments[selectedOrder.instr]?.price_dec ?? 0) : 0
+        }
+        qtyDec={
+          selectedOrder ? Number(instruments[selectedOrder.instr]?.qty_dec ?? 0) : 0
+        }
+        onClose={() => setSelectedOrder(null)}
+        onAmend={(order) => {
+          sheetRef.current?.dismiss();
+          router.push({ pathname: '/order_amend', params: { o_num: String(order.o_num) } });
+        }}
+        onCancel={(order) => {
+          sheetRef.current?.dismiss();
+          // Reuse the ConfirmDialog you already have — set target, dialog appears
+          setCancelTarget(order);
+        }}
+      />
+
     </View>
   );
 }

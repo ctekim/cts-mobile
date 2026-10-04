@@ -220,7 +220,6 @@ export function ProcessMessage(
                   dispatch(loadPanelPositionsForUser(userId, getDefaultLayout()));
                   dispatch(setSeqNum(sequenceNumber));
                   // HandleSuccessResult(`Logon OK. Next seq: ${sequenceNumber}`);
-                  HandleSuccessResult(`Logon successful`);
 
                   if (flag === FORCE_CHANGE_PASSWORD) {
                   dispatch(setForcePasswordChange(true));

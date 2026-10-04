@@ -37,6 +37,8 @@ export const REVAIDATION                   = 'Revalidation';
 export const TRIGGERED                     = 'Triggered';
 
 
+export const FOK                           = 'F'
+export const HIDDEN                        = 'H'
 
 export function convertOrderStatus(status: any): string {
   switch (String(status ?? '')) {
