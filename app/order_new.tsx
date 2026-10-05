@@ -144,6 +144,12 @@
       }
    }, [triggerOrder]);
 
+   useEffect(() => {
+      if (!trdacc && accountOptions.length > 0) {
+         setTrdacc(accountOptions[0].value);
+      }
+   }, [accountOptions, trdacc]);
+
    // ---- Submit: validate, then show confirm dialog ----
    const onSubmit = (submitVerb: 'B' | 'S') => {
       if (!instr) {
