@@ -1,8 +1,7 @@
 // app/order_book.tsx
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, Pressable, StyleSheet,
-  NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAppSelector } from '../src/redux/hooks';
@@ -12,16 +11,22 @@ import { formatPrice, formatQty } from '../src/common/format';
 import { DarkTheme } from '../src/common/theme';
 
 const ROW_HEIGHT = 30;
-
 const BUY_MARKET_PRICE = 99999999999;
 const SELL_MARKET_PRICE = -99999999999;
-
 const EMPTY_ARRAY: any[] = [];
 
-// Slim columns for side-by-side view
-const SIDE_COLUMNS = [
-  { key: 'price', label: 'Price', width: 95 },
-  { key: 'qty',   label: 'Qty',   width: 85 },
+type ViewMode = 'grouped' | 'orders';
+
+// Columns used by each view
+const GROUPED_COLUMNS = [
+  { key: 'price', label: 'Price', width: 80 },
+  { key: 'qty',   label: 'Qty',   width: 65 },
+];
+
+const ORDER_COLUMNS = [
+  { key: 'price',    label: 'Price',    width: 65 },
+  { key: 'qty',      label: 'Qty',      width: 55 },
+  { key: 'priority', label: 'Prio',     width: 45 },
 ];
 
 export default function OrderBookScreen() {
@@ -33,6 +38,7 @@ export default function OrderBookScreen() {
   const [selectedInstr, setSelectedInstr] = useState<string>(
     typeof params.instr === 'string' ? params.instr : ''
   );
+  const [view, setView] = useState<ViewMode>('grouped');
 
   const buyBook = useAppSelector(
     (s: any) => s.tables.tables.BuyOrderBookTable ?? EMPTY_ARRAY
@@ -45,33 +51,65 @@ export default function OrderBookScreen() {
   const priceDec = instrumentInfo?.price_dec ?? 0;
   const qtyDec = instrumentInfo?.qty_dec ?? 0;
 
-  const buyRows = useMemo(() => {
-    if (!selectedInstr) return [];
-    return buyBook
-      .filter((r: any) => r.instr === selectedInstr)
-      .sort((a: any, b: any) => {
-        const aMkt = Number(a.price) === BUY_MARKET_PRICE;
-        const bMkt = Number(b.price) === BUY_MARKET_PRICE;
-        if (aMkt !== bMkt) return aMkt ? -1 : 1;
-        const dPrice = Number(b.price) - Number(a.price);
-        if (dPrice !== 0) return dPrice;
-        return Number(a.priority ?? 0) - Number(b.priority ?? 0);
-      });
-  }, [buyBook, selectedInstr]);
+  // ---- Build the rows for the current view ----
+  const buildRows = (rows: any[], instr: string, side: 'buy' | 'sell') => {
+    const filtered = rows.filter((r: any) => r.instr === instr);
 
-  const sellRows = useMemo(() => {
-    if (!selectedInstr) return [];
-    return sellBook
-      .filter((r: any) => r.instr === selectedInstr)
-      .sort((a: any, b: any) => {
-        const aMkt = Number(a.price) === SELL_MARKET_PRICE;
-        const bMkt = Number(b.price) === SELL_MARKET_PRICE;
-        if (aMkt !== bMkt) return aMkt ? -1 : 1;
-        const dPrice = Number(a.price) - Number(b.price);
-        if (dPrice !== 0) return dPrice;
-        return Number(a.priority ?? 0) - Number(b.priority ?? 0);
+    if (view === 'grouped') {
+      const map = new Map<number, number>();
+      filtered.forEach((r: any) => {
+        const p = Number(r.price);
+        const q = Number(r.qty ?? 0);
+        map.set(p, (map.get(p) ?? 0) + q);
       });
-  }, [sellBook, selectedInstr]);
+      const grouped = Array.from(map.entries()).map(([price, qty]) => ({
+        price,
+        qty,
+      }));
+      grouped.sort((a, b) => {
+        const aMkt = side === 'buy'
+          ? a.price === BUY_MARKET_PRICE
+          : a.price === SELL_MARKET_PRICE;
+        const bMkt = side === 'buy'
+          ? b.price === BUY_MARKET_PRICE
+          : b.price === SELL_MARKET_PRICE;
+        if (aMkt !== bMkt) return aMkt ? -1 : 1;
+        return side === 'buy' ? b.price - a.price : a.price - b.price;
+      });
+      return grouped;
+    }
+
+    // view === 'orders': one row per order
+    const orders = filtered.map((r: any) => ({
+      price: Number(r.price),
+      qty: Number(r.qty ?? 0),
+      priority: Number(r.priority ?? 0),
+    }));
+    orders.sort((a, b) => {
+      const aMkt = side === 'buy'
+        ? a.price === BUY_MARKET_PRICE
+        : a.price === SELL_MARKET_PRICE;
+      const bMkt = side === 'buy'
+        ? b.price === BUY_MARKET_PRICE
+        : b.price === SELL_MARKET_PRICE;
+      if (aMkt !== bMkt) return aMkt ? -1 : 1;
+      // Sort by price first, then priority (lower number = higher priority)
+      const priceCmp = side === 'buy' ? b.price - a.price : a.price - b.price;
+      if (priceCmp !== 0) return priceCmp;
+      return a.priority - b.priority;
+    });
+    return orders;
+  };
+
+  const buyRows = useMemo(
+    () => buildRows(buyBook, selectedInstr, 'buy'),
+    [buyBook, selectedInstr, view]
+  );
+
+  const sellRows = useMemo(
+    () => buildRows(sellBook, selectedInstr, 'sell'),
+    [sellBook, selectedInstr, view]
+  );
 
   useEffect(() => {
     if (!connected) router.replace('/');
@@ -82,39 +120,31 @@ export default function OrderBookScreen() {
     router.replace('/');
   };
 
-  const cellText = (item: any, col: { key: string }): string => {
-    const raw = item[col.key];
-    if (raw === null || raw === undefined) return '';
-
-    switch (col.key) {
-      case 'price': {
-        const n = Number(raw);
-        if (n === BUY_MARKET_PRICE || n === SELL_MARKET_PRICE) return 'MKT';
-        return formatPrice(raw, priceDec);
-      }
-      case 'qty':
-        return formatQty(raw, qtyDec);
-      default:
-        return String(raw);
+  // ---- Cell text ----
+  const cellText = (row: any, col: { key: string }): string => {
+    if (col.key === 'price') {
+      if (row.price === BUY_MARKET_PRICE || row.price === SELL_MARKET_PRICE) return 'MKT';
+      return formatPrice(row.price, priceDec);
     }
+    if (col.key === 'qty') return formatQty(row.qty, qtyDec);
+    if (col.key === 'priority') return String(row.priority ?? '');
+    return '';
   };
 
-  const renderSide = (
-    rows: any[],
-    side: 'buy' | 'sell'
-  ) => {
+  const activeColumns = view === 'grouped' ? GROUPED_COLUMNS : ORDER_COLUMNS;
+
+  const renderSide = (rows: any[], side: 'buy' | 'sell') => {
     const sideColor = side === 'buy' ? DarkTheme.positive : DarkTheme.negative;
+    const label = side === 'buy' ? 'BUY' : 'SELL';
 
     return (
       <View style={styles.sideContainer}>
-        {/* Side header */}
         <Text style={[styles.sideHeader, { color: sideColor }]}>
-          {side === 'buy' ? 'BUY' : 'SELL'} ({rows.length})
+          {label} ({rows.length})
         </Text>
 
-        {/* Column headers */}
         <View style={[styles.headerRow, { backgroundColor: DarkTheme.headerBg }]}>
-          {SIDE_COLUMNS.map((col) => (
+          {activeColumns.map((col) => (
             <View
               key={col.key}
               style={[
@@ -129,11 +159,11 @@ export default function OrderBookScreen() {
           ))}
         </View>
 
-        {/* Rows */}
         <FlatList
           data={rows}
           keyExtractor={(r: any, index: number) =>
-            `${side}-${r.instr}-${r.price}-${r.priority ?? 0}-${index}`}
+            `${side}-${r.price}-${r.priority ?? 0}-${index}`
+          }
           renderItem={({ item, index }) => (
             <Pressable
               style={({ pressed }) => [
@@ -146,10 +176,10 @@ export default function OrderBookScreen() {
                 pressed && { backgroundColor: DarkTheme.surfacePressed },
               ]}
               onPress={() =>
-                console.log(`[order_book] ${side} tapped:`, item.instr, item.price)
+                console.log(`[order_book] ${side} tapped price:`, item.price)
               }
             >
-              {SIDE_COLUMNS.map((col) => (
+              {activeColumns.map((col) => (
                 <Text
                   key={col.key}
                   style={[
@@ -160,7 +190,7 @@ export default function OrderBookScreen() {
                       borderBottomColor: DarkTheme.cellBorder,
                       color: col.key === 'price' ? sideColor : DarkTheme.text,
                     },
-                    styles.num,
+                    col.key !== 'priority' && styles.num,
                   ]}
                   numberOfLines={1}
                 >
@@ -199,7 +229,7 @@ export default function OrderBookScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Instrument bar */}
+      {/* Instrument + view toggle */}
       <View style={styles.instrBar}>
         <Text style={[styles.instrLabel, { color: DarkTheme.textMuted }]}>
           Instrument:
@@ -212,6 +242,56 @@ export default function OrderBookScreen() {
             {selectedInstr || '(none selected)'}
           </Text>
         </TouchableOpacity>
+
+        {/* View toggle */}
+        <View style={styles.viewToggle}>
+          <TouchableOpacity
+            style={[
+              styles.viewBtn,
+              {
+                backgroundColor: view === 'grouped'
+                  ? DarkTheme.accent
+                  : DarkTheme.surface,
+                borderColor: view === 'grouped'
+                  ? DarkTheme.accent
+                  : DarkTheme.cellBorder,
+              },
+            ]}
+            onPress={() => setView('grouped')}
+          >
+            <Text
+              style={[
+                styles.viewText,
+                { color: view === 'grouped' ? '#fff' : DarkTheme.text },
+              ]}
+            >
+              Grouped
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.viewBtn,
+              {
+                backgroundColor: view === 'orders'
+                  ? DarkTheme.accent
+                  : DarkTheme.surface,
+                borderColor: view === 'orders'
+                  ? DarkTheme.accent
+                  : DarkTheme.cellBorder,
+              },
+            ]}
+            onPress={() => setView('orders')}
+          >
+            <Text
+              style={[
+                styles.viewText,
+                { color: view === 'orders' ? '#fff' : DarkTheme.text },
+              ]}
+            >
+              By Order
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {!selectedInstr ? (
@@ -248,13 +328,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
+    gap: 8,
   },
-  instrLabel: { fontSize: 13, marginRight: 8 },
+  instrLabel: { fontSize: 13, marginRight: 4 },
   instrValue: {
-    flex: 1,
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 6,
@@ -262,7 +342,19 @@ const styles = StyleSheet.create({
   },
   instrText: { fontSize: 14, fontWeight: 'bold' },
 
-  // Side-by-side body
+  viewToggle: {
+    flexDirection: 'row',
+    gap: 6,
+    marginLeft: 'auto',
+  },
+  viewBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  viewText: { fontSize: 12, fontWeight: '600' },
+
   body: {
     flex: 1,
     flexDirection: 'row',

@@ -13,19 +13,19 @@ import {
 
 export function handleLogout() {
   const ws = getWs();
-  const { tsUserId, seqNum, bsid } = store.getState().globals;
+  const { userId, seqNum, bsid } = store.getState().globals;
 
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({
       [JSON_KEY_MESSAGE_TYPE]: MSGTYPE_TS_LOGOFF,
-      [JSON_KEY_USER]: tsUserId,
-      [JSON_KEY_SUBMITTER]: tsUserId,
+      [JSON_KEY_USER]: userId,
+      [JSON_KEY_SUBMITTER]: userId,
       [JSON_KEY_IN_SEQ]: seqNum,
       [JSON_KEY_BROWSER_SESSION_ID]: bsid,
     }));
   }
 
-//   closeSocket();
-//   store.dispatch(resetGlobals());
-//   store.dispatch({ type: 'tables/clearAll' });
+  closeSocket();
+  store.dispatch(resetGlobals());
+  store.dispatch({ type: 'tables/resetTables' });
 }
