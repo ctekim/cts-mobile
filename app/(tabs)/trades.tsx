@@ -187,8 +187,8 @@ export default function TradesScreen() {
   const cellColor = (item: any, col: ColumnDef): string => {
     if (col.key === 'verb' || col.key === 'agr') {
       const s = String(item[col.key] ?? '').toUpperCase();
-      if (s === 'B') return DarkTheme.positive;
-      if (s === 'S') return DarkTheme.negative;
+      if (s === 'B') return DarkTheme.buy;
+      if (s === 'S') return DarkTheme.sell;
       return DarkTheme.textMuted;
     }
     if (col.key === 'status') {

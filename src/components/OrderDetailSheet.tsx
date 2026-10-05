@@ -78,8 +78,8 @@ export const OrderDetailSheet = forwardRef<BottomSheetModal, Props>(
         'Side',
         convertSide(order.verb),
         String(order.verb).toUpperCase() === 'B'
-          ? DarkTheme.positive
-          : DarkTheme.negative,
+          ? DarkTheme.buy
+          : DarkTheme.sell,
       );
       pushRow('Price', formatPrice(order.price, priceDec));
       pushRow('Quantity', formatQty(order.orig_qty, qtyDec));

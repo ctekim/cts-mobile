@@ -24,6 +24,8 @@ export interface AppColors {
   neutral: string;
   accent: string;
   danger: string;
+  buy: string;
+  sell: string;
 }
 
 export const DarkTheme: AppColors = {
@@ -50,6 +52,9 @@ export const DarkTheme: AppColors = {
   neutral: '#888888',
   accent: '#208AEF',
   danger: '#a00',
+
+  buy: '#4a90e2',     
+  sell: '#ff4c4c',
 };
 
 export const LightTheme: AppColors = {

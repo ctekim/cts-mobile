@@ -226,7 +226,7 @@ export default function OrdersScreen() {
   const cellColor = (item: any, col: ColumnDef): string => {
     if (col.key === 'verb') {
       const s = String(item.verb ?? '').toUpperCase();
-      return s === 'B' ? DarkTheme.positive : DarkTheme.negative;
+      return s === 'B' ? DarkTheme.buy : DarkTheme.sell;
     }
     if (col.key === 'status') {
       return orderStatusColor(String(item.status ?? ''));

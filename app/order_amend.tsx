@@ -210,9 +210,9 @@
          {/* Read-only */}
          <ReadonlyRow label="Instrument" value={String(order.instr ?? '')} />
          <ReadonlyRow
-            label="Side"
-            value={convertSide(order.verb)}
-            color={String(order.verb).toUpperCase() === 'B' ? DarkTheme.positive : DarkTheme.negative}
+         label="Side"
+         value={convertSide(order.verb)}
+         color={String(order.verb).toUpperCase() === 'B' ? DarkTheme.buy : DarkTheme.sell}
          />
          <ReadonlyRow label="Account" value={String(order.trdacc ?? '')} />
          <ReadonlyRow label="Type" value={convertOrderType(order.o_type)} />
