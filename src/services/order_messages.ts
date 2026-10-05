@@ -39,13 +39,14 @@ export interface AmendOrderParams {
   oNum: number;
   instr: string;
   trdacc: string;
-  duration: string;          // DURATION_DAY / DURATION_GTC / DURATION_IMMEDIATE
-  orderType: string;         // LIMIT / MARKET
-  price: number;             // already scaled by 10^price_dec
-  origQty: number;           // already scaled by 10^qty_dec
-  visibleQty: number;        // scaled
-  specialType?: string | null;    // FOK / HIDDEN / null
-  triggerPrice?: number | null;   // scaled
+  duration: string;
+  orderType: string;
+  price: number;
+  origQty: number;
+  visibleQty: number;
+  visibleBal?: number;     
+  specialType?: string | null;
+  triggerPrice?: number | null;
   triggerCondition?: string | null;
   triggerDuration?: string | null;
   sessionType?: string | null;
@@ -64,21 +65,26 @@ export function sendAmendOrder(p: AmendOrderParams): boolean {
     [JSON_KEY_VISIBLE_QTY]: p.visibleQty,
   };
 
+  if (p.visibleBal !== undefined) {
+    msg['vis_bal'] = p.visibleBal;    // use the constant if you have JSON_KEY_VISIBLE_BAL
+  }
+
   if (p.specialType === FOK) msg[JSON_KEY_SPECIAL_TYPE] = FOK;
   else if (p.specialType === HIDDEN) msg[JSON_KEY_SPECIAL_TYPE] = HIDDEN;
 
+  // Build flags fresh each time so the server gets the exact current state
+  let flags = 0;
   if (p.triggerCondition && p.triggerPrice != null) {
     msg[JSON_KEY_TRIGGER_PRICE] = p.triggerPrice;
     msg[JSON_KEY_TRIGGER_CONDITION] = p.triggerCondition;
     msg[JSON_KEY_TRIGGER_DURATION] = p.triggerDuration ?? p.duration;
-    msg[JSON_KEY_ORDER_TYPE_FLAGS] = TRIGGER_FLAG;
+    flags |= TRIGGER_FLAG;
   }
-
   if (p.sessionType) {
     msg[JSON_KEY_SESSION_TYPE] = p.sessionType;
-    msg[JSON_KEY_ORDER_TYPE_FLAGS] =
-      (msg[JSON_KEY_ORDER_TYPE_FLAGS] || 0) | SCHEDULE_FLAG;
+    flags |= SCHEDULE_FLAG;
   }
+  msg[JSON_KEY_ORDER_TYPE_FLAGS] = flags;
 
   return sendTsMessage(msg);
 }

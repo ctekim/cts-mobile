@@ -41,7 +41,7 @@ interface DetailRow {
 
 export const OrderDetailSheet = forwardRef<BottomSheetModal, Props>(
   ({ order, priceDec, qtyDec, onClose, onAmend, onCancel }, ref) => {
-    const snapPoints = useMemo(() => ['55%', '85%'], []);
+    const snapPoints = useMemo(() => ['70%', '95%'], []);
 
     const renderBackdrop = useCallback(
       (props: any) => (
@@ -104,7 +104,7 @@ export const OrderDetailSheet = forwardRef<BottomSheetModal, Props>(
       // ---- Flags row (shows combined Trigger/Schedule if any) ----
       const flags = convertOrderFlags(order.o_flags);
       if (flags) {
-        pushRow('Type 2', flags);
+        pushRow('Other', flags);
       }
 
       // ---- Scheduled orders: show session type ----
@@ -179,9 +179,7 @@ export const OrderDetailSheet = forwardRef<BottomSheetModal, Props>(
                     style={[styles.button, { backgroundColor: DarkTheme.accent }]}
                     onPress={() => onAmend(order)}
                   >
-                    <Text style={styles.buttonText} numberOfLines={1}>
-                      Amend
-                    </Text>
+                    <Text style={styles.buttonText} numberOfLines={1}>Amend</Text>
                   </TouchableOpacity>
                 )}
 
@@ -190,9 +188,7 @@ export const OrderDetailSheet = forwardRef<BottomSheetModal, Props>(
                     style={[styles.button, { backgroundColor: DarkTheme.danger }]}
                     onPress={() => onCancel(order)}
                   >
-                    <Text style={styles.buttonText} numberOfLines={1}>
-                      Cancel Order
-                    </Text>
+                    <Text style={styles.buttonText} numberOfLines={1}>Cancel</Text>
                   </TouchableOpacity>
                 )}
 
@@ -206,12 +202,9 @@ export const OrderDetailSheet = forwardRef<BottomSheetModal, Props>(
                     },
                   ]}
                   onPress={() => {
-                    // Close the sheet modal itself
                     if (ref && typeof ref !== 'function' && ref.current) {
                       ref.current.dismiss();
                     }
-                    // Then let the parent clear the selected order (optional — dismiss triggers onDismiss)
-                    onClose();
                   }}
                 >
                   <Text
@@ -222,7 +215,6 @@ export const OrderDetailSheet = forwardRef<BottomSheetModal, Props>(
                   </Text>
                 </TouchableOpacity>
               </View>
-
             </>
           ) : null}
         </BottomSheetScrollView>
