@@ -175,9 +175,48 @@ export default function OrderBookScreen() {
                 },
                 pressed && { backgroundColor: DarkTheme.surfacePressed },
               ]}
-              onPress={() =>
-                console.log(`[order_book] ${side} tapped price:`, item.price)
-              }
+              onPress={() => {
+                const isMarket =
+                  item.price === BUY_MARKET_PRICE || item.price === SELL_MARKET_PRICE;
+
+                if (isMarket) {
+                  console.log(`[order_book] ${side} tapped MKT row — ignored`);
+                  return;
+                }
+
+                // Find the tapped row's position in the visible rows array,
+                // then sum from the top down to and including that row.
+                // Using a strict match on (price, qty, priority) so duplicate
+                // prices in By-Order view resolve to the correct index.
+                const tappedIndex = rows.findIndex((r: any) =>
+                  r.price === item.price &&
+                  r.qty === item.qty &&
+                  r.priority === item.priority
+                );
+
+                if (tappedIndex < 0) {
+                  console.warn('[order_book] could not locate tapped row', item);
+                  return;
+                }
+
+                const cumulativeQty = rows
+                  .slice(0, tappedIndex + 1)
+                  .reduce((acc: number, r: any) => acc + Number(r.qty ?? 0), 0);
+
+                const displayPrice = (item.price / Math.pow(10, priceDec)).toFixed(priceDec);
+                const displayQty = (cumulativeQty / Math.pow(10, qtyDec)).toFixed(qtyDec);
+                const verbForOrder = side === 'buy' ? 'S' : 'B';
+
+                router.push({
+                  pathname: '/order_new',
+                  params: {
+                    instr: selectedInstr,
+                    price: displayPrice,
+                    qty: displayQty,
+                    verb: verbForOrder,
+                  },
+                });
+              }}
             >
               {activeColumns.map((col) => (
                 <Text
