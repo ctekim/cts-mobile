@@ -16,9 +16,28 @@ interface Props {
   message: string;
   actions: Action[];
   onClose: () => void;
+  variant?: 'default' | 'error' | 'success';
+  accentColor?: string; 
 }
 
-export function ConfirmDialog({ visible, title, message, actions, onClose }: Props) {
+export function ConfirmDialog({
+  visible,
+  title,
+  message,
+  actions,
+  onClose,
+  variant = 'default',
+  accentColor,
+}: Props) {
+const titleColor =
+  accentColor
+    ? accentColor
+    : variant === 'error'
+    ? DarkTheme.negative
+    : variant === 'success'
+    ? DarkTheme.positive
+    : DarkTheme.text;
+
   return (
     <Modal
       visible={visible}
@@ -28,10 +47,15 @@ export function ConfirmDialog({ visible, title, message, actions, onClose }: Pro
     >
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={[styles.title, { color: titleColor }]}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
 
-          <View style={styles.actions}>
+          <View
+            style={[
+              styles.actions,
+              actions.length === 1 && { justifyContent: 'center' },
+            ]}
+          >
             {actions.map((action, idx) => {
               const isCancel = action.style === 'cancel';
               const isDestructive = action.style === 'destructive';
@@ -39,7 +63,7 @@ export function ConfirmDialog({ visible, title, message, actions, onClose }: Pro
                 ? DarkTheme.danger
                 : isCancel
                 ? 'transparent'
-                : DarkTheme.accent;
+                : accentColor ?? DarkTheme.accent;
               const borderColor = isCancel ? DarkTheme.cellBorder : bgColor;
               const textColor = isCancel ? DarkTheme.text : '#fff';
 
@@ -53,6 +77,7 @@ export function ConfirmDialog({ visible, title, message, actions, onClose }: Pro
                       borderColor,
                       borderWidth: isCancel ? 1 : 0,
                     },
+                    actions.length === 1 && { minWidth: 140 },
                   ]}
                   onPress={() => {
                     action.onPress();
@@ -89,7 +114,6 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: DarkTheme.cellBorder,
-    // shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.5,
@@ -99,7 +123,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: DarkTheme.text,
     marginBottom: 10,
   },
   message: {

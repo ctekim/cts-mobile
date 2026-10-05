@@ -339,14 +339,20 @@ export default function OrdersScreen() {
         <Text style={[styles.toolbarTitle, { color: DarkTheme.text }]}>
           Orders ({grouped.length})
         </Text>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity
-            style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
-            onPress={onLogout}
-          >
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              style={[styles.navBtn, { backgroundColor: DarkTheme.buy }]}
+              onPress={() => router.push('/order_new')}
+            >
+              <Text style={styles.navBtnText}>+ New</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
+              onPress={onLogout}
+            >
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          </View>
       </View>
 
       <View style={[styles.headerRow, { backgroundColor: DarkTheme.headerBg }]}>

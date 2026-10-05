@@ -2,7 +2,7 @@
 import { useRef, useEffect } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
-  StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
+  StyleSheet, NativeSyntheticEvent, NativeScrollEvent, Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppSelector } from '../../src/redux/hooks';
@@ -143,7 +143,7 @@ export default function InstrumentsScreen() {
          },
          pressed && { backgroundColor: DarkTheme.surfacePressed },
          ]}
-         onPress={() => console.log('[instruments] tapped:', item.code)}
+         // onPress={() => console.log('[instruments] tapped:', item.code)}
       >
          <Text style={[styles.codeText, { color: codeColor(item) }]} numberOfLines={1}>
          {item.code ?? ''}
@@ -157,20 +157,22 @@ export default function InstrumentsScreen() {
 
       return (
          <Pressable
-         style={({ pressed }) => [
-            styles.dataRow,
-            {
-               backgroundColor: index % 2 === 1
-               ? DarkTheme.surfaceAlt
-               : DarkTheme.surface,
-               opacity: isSuspended ? 0.6 : 1,
-            },
-            pressed && { backgroundColor: DarkTheme.surfacePressed },
-         ]}
-         onPress={() => {
-            router.push({ pathname: '/order_book', params: { instr: item.code } });
-         }}
-
+            style={({ pressed }) => [
+               styles.dataRow,
+               {
+                  backgroundColor: index % 2 === 1
+                  ? DarkTheme.surfaceAlt
+                  : DarkTheme.surface,
+                  opacity: isSuspended ? 0.6 : 1,
+               },
+               pressed && { backgroundColor: DarkTheme.surfacePressed },
+            ]}
+            onPress={() => {
+               router.push({ pathname: '/order_book', params: { instr: item.code } });
+            }}
+            onLongPress={() => {
+               router.push({ pathname: '/order_new', params: { instr: item.code } });
+            }}
          >
          {COLUMNS.map((col) => (
             <Text

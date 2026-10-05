@@ -82,7 +82,7 @@ export interface ProcessCallbacks {
 }
 
 const ShowError = (msg: string, _flag?: boolean) => {
-  if (__DEV__) console.warn('[CTS error]', msg);
+//   if (__DEV__) console.warn('[CTS error]', msg);
   store.dispatch(showResult({
     type: 'error',
     message: msg,

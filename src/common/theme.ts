@@ -81,4 +81,7 @@ export const LightTheme: AppColors = {
   neutral: '#666666',
   accent: '#208AEF',
   danger: '#900',
+  
+  buy: '#4a90e2',     
+  sell: '#ff4c4c',
 };

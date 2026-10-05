@@ -1,6 +1,6 @@
 // src/services/order_messages.ts
 import { sendTsMessage } from './ts_send';
-import { MSGTYPE_ORDER_CANCEL, MSGTYPE_ORDER_AMEND } from '../common/msg_types';
+import { MSGTYPE_ORDER_CANCEL, MSGTYPE_ORDER_AMEND, MSGTYPE_ORDER_NEW } from '../common/msg_types';
 import {
   JSON_KEY_MESSAGE_TYPE,
   JSON_KEY_ORDER_NUMBER,
@@ -22,7 +22,10 @@ import {
   SCHEDULE_FLAG,
   FOK,
   HIDDEN,
+  JSON_KEY_VERB,
+  JSON_KEY_USER,
 } from '../common/common';
+import { store } from '../redux/store';
 
 export function sendCancelOrder(
   oNum: number,
@@ -85,6 +88,73 @@ export function sendAmendOrder(p: AmendOrderParams): boolean {
     flags |= SCHEDULE_FLAG;
   }
   msg[JSON_KEY_ORDER_TYPE_FLAGS] = flags;
+
+  return sendTsMessage(msg);
+}
+
+export interface NewOrderParams {
+  instr: string;
+  trdacc: string;
+  verb: 'B' | 'S';
+  duration: string;             // DURATION_DAY / DURATION_GTC / DURATION_IMMEDIATE
+  orderType: string;            // ORDER_TYPE_LIMIT / ORDER_TYPE_MARKET
+  price?: number | null;        // scaled by 10^price_dec; only for LIMIT
+  origQty: number;              // scaled by 10^qty_dec
+  visibleQty: number;           // scaled; 0 if not hidden
+  specialType?: string | null;  // FOK / HIDDEN
+  triggerPrice?: number | null; // scaled
+  triggerCondition?: string | null;
+  triggerDuration?: string | null;
+  sessionType?: string | null;
+}
+
+export interface NewOrderParams {
+  instr: string;
+  trdacc: string;
+  verb: 'B' | 'S';
+  duration: string;             // DURATION_DAY / DURATION_GTC / DURATION_IMMEDIATE
+  orderType: string;            // ORDER_TYPE_LIMIT / ORDER_TYPE_MARKET
+  price?: number | null;        // scaled by 10^price_dec; only for LIMIT
+  origQty: number;              // scaled by 10^qty_dec
+  visibleQty: number;           // scaled; 0 if not hidden
+  specialType?: string | null;  // FOK / HIDDEN
+  triggerPrice?: number | null; // scaled
+  triggerCondition?: string | null;
+  triggerDuration?: string | null;
+  sessionType?: string | null;
+}
+
+export function sendNewOrder(p: NewOrderParams): boolean {
+  const userId = store.getState().globals.userId;
+  const msg: Record<string, any> = {
+    [JSON_KEY_MESSAGE_TYPE]: MSGTYPE_ORDER_NEW,
+    [JSON_KEY_INSTRUMENT]: p.instr,
+    [JSON_KEY_TRADING_ACCOUNT]: p.trdacc,
+    [JSON_KEY_VERB]: p.verb,
+    [JSON_KEY_DURATION]: p.duration,
+    [JSON_KEY_ORDER_TYPE]: p.orderType,
+    [JSON_KEY_ORIGINAL_QTY]: p.origQty,
+    [JSON_KEY_VISIBLE_QTY]: p.visibleQty,
+    [JSON_KEY_USER]: userId,          // ← added
+  };
+
+  if (p.price != null) msg[JSON_KEY_PRICE] = p.price;
+
+  if (p.specialType === FOK) msg[JSON_KEY_SPECIAL_TYPE] = FOK;
+  else if (p.specialType === HIDDEN) msg[JSON_KEY_SPECIAL_TYPE] = HIDDEN;
+
+  let flags = 0;
+  if (p.triggerCondition && p.triggerPrice != null) {
+    msg[JSON_KEY_TRIGGER_PRICE] = p.triggerPrice;
+    msg[JSON_KEY_TRIGGER_CONDITION] = p.triggerCondition;
+    msg[JSON_KEY_TRIGGER_DURATION] = p.triggerDuration ?? p.duration;
+    flags |= TRIGGER_FLAG;
+  }
+  if (p.sessionType) {
+    msg[JSON_KEY_SESSION_TYPE] = p.sessionType;
+    flags |= SCHEDULE_FLAG;
+  }
+  if (flags) msg[JSON_KEY_ORDER_TYPE_FLAGS] = flags;
 
   return sendTsMessage(msg);
 }
