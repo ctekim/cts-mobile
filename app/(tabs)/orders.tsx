@@ -27,6 +27,7 @@ import {
 import { ConfirmDialog } from '../../src/components/ConfirmDialog';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { OrderDetailSheet } from '../../src/components/OrderDetailSheet';
+import { Fab } from '../../src/components/Fab';
 
 const ORDER_NUM_WIDTH = 80;
 const ROW_HEIGHT = 36;
@@ -494,8 +495,7 @@ export default function OrdersScreen() {
           // Reuse the ConfirmDialog you already have — set target, dialog appears
           setCancelTarget(order);
         }}
-      />
-
+      /><Fab onPress={() => router.push('/order_new')} />
     </View>
   );
 }

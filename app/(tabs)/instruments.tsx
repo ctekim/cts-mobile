@@ -14,6 +14,7 @@ import {
 } from '../../src/common/common';
 import { formatPrice, formatQty, formatStatus } from '../../src/common/format';
 import { DarkTheme } from '../../src/common/theme';
+import { Fab } from '../../src/components/Fab';
 
 const CODE_WIDTH = 90;
 const ROW_HEIGHT = 36;
@@ -291,6 +292,7 @@ export default function InstrumentsScreen() {
             />
          </ScrollView>
          </View>
+         <Fab onPress={() => router.push('/order_new')} />
       </View>
    );
    }
