@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppSelector } from '../../src/redux/hooks';
-import { selectTSConnected, selectTableData } from '../../src/redux/globalsSlice';
+import { selectTSConnected, selectTableData, selectTradesRequest } from '../../src/redux/globalsSlice';
 import { handleLogout } from '../../src/services/logout';
 import { formatPrice, formatQty } from '../../src/common/format';
 import { DarkTheme } from '../../src/common/theme';
@@ -51,6 +51,7 @@ export default function TradesScreen() {
     (s: any) => s.tables.tables.UsersTradesTable ?? EMPTY_ARRAY
   );
   const instruments = useAppSelector(selectTableData);
+  const tradesRequest = useAppSelector(selectTradesRequest);
 
   // ---- Group trades by (t_num, ta_num) ----
   // A match produces one row per side (B and S). Collapse into a single
@@ -282,6 +283,14 @@ export default function TradesScreen() {
           Trades ({grouped.length})
         </Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
+          {tradesRequest && (
+            <TouchableOpacity
+              style={[styles.navBtn, { backgroundColor: DarkTheme.accent }]}
+              onPress={() => router.push('/trades_request')}
+            >
+              <Text style={styles.navBtnText}>🔍 Request</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
             onPress={onLogout}
@@ -372,9 +381,23 @@ export default function TradesScreen() {
             scrollEventThrottle={16}
             showsVerticalScrollIndicator
             ListEmptyComponent={
-              <Text style={[styles.empty, { color: DarkTheme.textMuted }]}>
-                No trades yet
-              </Text>
+              tradesRequest ? (
+                <TouchableOpacity
+                  onPress={() => router.push('/trades_request')}
+                  style={styles.emptyTapArea}
+                >
+                  <Text style={[styles.empty, { color: DarkTheme.textMuted }]}>
+                    No trades loaded
+                  </Text>
+                  <Text style={[styles.emptyHint, { color: DarkTheme.accent }]}>
+                    Tap 🔍 above to request trades
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={[styles.empty, { color: DarkTheme.textMuted }]}>
+                  No trades yet
+                </Text>
+              )
             }
           />
         </ScrollView>
@@ -442,4 +465,15 @@ const styles = StyleSheet.create({
   num: { fontFamily: 'monospace', textAlign: 'right' },
 
   empty: { textAlign: 'center', marginTop: 40 },
+
+  emptyTapArea: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyHint: {
+    marginTop: 8,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+
 });

@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppSelector } from '../../src/redux/hooks';
-import { selectTSConnected, selectTableData } from '../../src/redux/globalsSlice';
+import { selectTSConnected, selectTableData, selectHoldingsRequest } from '../../src/redux/globalsSlice';
 import { handleLogout } from '../../src/services/logout';
 import { formatQty, formatStatus } from '../../src/common/format';
 import { DarkTheme } from '../../src/common/theme';
@@ -43,7 +43,7 @@ export default function HoldingsScreen() {
     (s: any) => s.tables.tables.HoldingsTable ?? EMPTY_ARRAY
   );
   const instruments = useAppSelector(selectTableData);
-
+  const holdingsRequest = useAppSelector(selectHoldingsRequest);
   const leftListRef = useRef<FlatList<any>>(null);
   const headerScrollRef = useRef<ScrollView>(null);
 
@@ -160,12 +160,22 @@ export default function HoldingsScreen() {
         <Text style={[styles.toolbarTitle, { color: DarkTheme.text }]}>
           Holdings ({holdings.length})
         </Text>
-        <TouchableOpacity
-          style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
-          onPress={onLogout}
-        >
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {holdingsRequest && (
+            <TouchableOpacity
+              style={[styles.navBtn, { backgroundColor: DarkTheme.accent }]}
+              onPress={() => router.push('/holdings_request')}
+            >
+              <Text style={styles.navBtnText}>🔍 Request</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
+            onPress={onLogout}
+          >
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={[styles.headerRow, { backgroundColor: DarkTheme.headerBg }]}>
@@ -243,9 +253,23 @@ export default function HoldingsScreen() {
             scrollEventThrottle={16}
             showsVerticalScrollIndicator
             ListEmptyComponent={
-              <Text style={[styles.empty, { color: DarkTheme.textMuted }]}>
-                No holdings yet
-              </Text>
+              holdingsRequest ? (
+                <TouchableOpacity
+                  onPress={() => router.push('/holdings_request')}
+                  style={styles.emptyTapArea}
+                >
+                  <Text style={[styles.empty, { color: DarkTheme.textMuted }]}>
+                    No holdings loaded
+                  </Text>
+                  <Text style={[styles.emptyHint, { color: DarkTheme.accent }]}>
+                    Tap 🔍 above to request holdings
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={[styles.empty, { color: DarkTheme.textMuted }]}>
+                  No holdings yet
+                </Text>
+              )
             }
           />
         </ScrollView>
@@ -302,4 +326,19 @@ const styles = StyleSheet.create({
   num: { fontFamily: 'monospace', textAlign: 'right' },
 
   empty: { textAlign: 'center', marginTop: 40 },
+
+  navBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  
+  navBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  
+  emptyTapArea: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyHint: {
+    marginTop: 8,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+
 });

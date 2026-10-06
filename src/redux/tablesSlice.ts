@@ -87,8 +87,20 @@ const tablesSlice = createSlice({
   reducers: {
     addRow: (state, action: PayloadAction<{ table: string; row: any }>) => {
       const { table, row } = action.payload;
-      if (!state.tables[table]) state.tables[table] = [];
-      state.tables[table].push(row);
+      if (!state.tables[table]) {
+        state.tables[table] = [row];
+        return;
+      }
+
+      // Upsert: if a row with the same natural key already exists, replace it.
+      // Otherwise append.
+      const idx = state.tables[table].findIndex((r) => rowMatches(r, row, table));
+
+      if (idx >= 0) {
+        state.tables[table][idx] = { ...state.tables[table][idx], ...row };
+      } else {
+        state.tables[table].push(row);
+      }
     },
     updateRow: (state, action: PayloadAction<{ table: string; row: any }>) => {
       const { table, row } = action.payload;
