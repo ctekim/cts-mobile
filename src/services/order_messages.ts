@@ -26,6 +26,7 @@ import {
   JSON_KEY_USER,
 } from '../common/common';
 import { store } from '../redux/store';
+import { MSG_TYPE_ORDER_SEARCH_REQUEST } from '../common/msg_types';
 
 export function sendCancelOrder(
   oNum: number,
@@ -157,4 +158,31 @@ export function sendNewOrder(p: NewOrderParams): boolean {
   if (flags) msg[JSON_KEY_ORDER_TYPE_FLAGS] = flags;
 
   return sendTsMessage(msg);
+}
+
+// ---------- Order Search Requests ----------
+/**
+ * Request a single order by its order number.
+ * Server replies with MSG_TYPE_SPECIFIC_ORDERS_REPLY rows.
+ */
+export function sendOrderSearchByNumber(orderNumber: number): boolean {
+  return sendTsMessage({
+    [JSON_KEY_MESSAGE_TYPE]: MSG_TYPE_ORDER_SEARCH_REQUEST,
+    [JSON_KEY_ORDER_NUMBER]: orderNumber,
+  });
+}
+
+/**
+ * Request all orders for a given user (trader) and instrument.
+ * Server replies with MSG_TYPE_SPECIFIC_ORDERS_REPLY rows.
+ */
+export function sendOrderSearchByUserAndInstrument(
+  user: string,
+  instrument: string,
+): boolean {
+  return sendTsMessage({
+    [JSON_KEY_MESSAGE_TYPE]: MSG_TYPE_ORDER_SEARCH_REQUEST,
+    [JSON_KEY_USER]: user,
+    [JSON_KEY_INSTRUMENT]: instrument,
+  });
 }

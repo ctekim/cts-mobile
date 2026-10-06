@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppSelector } from '../../src/redux/hooks';
-import { selectTSConnected, selectTableData } from '../../src/redux/globalsSlice';
+import { selectTSConnected, selectTableData, selectOrdersRequest } from '../../src/redux/globalsSlice';
 import { handleLogout } from '../../src/services/logout';
 import { sendCancelOrder } from '../../src/services/order_messages';
 import { formatPrice, formatQty } from '../../src/common/format';
@@ -92,6 +92,7 @@ export default function OrdersScreen() {
     (s: any) => s.tables.tables.UsersOrdersTable ?? EMPTY_ARRAY
   );
   const instruments = useAppSelector(selectTableData);
+  const ordersRequest = useAppSelector(selectOrdersRequest);
   const [cancelTarget, setCancelTarget] = useState<any | null>(null);
   const sheetRef = useRef<BottomSheetModal>(null);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
@@ -340,20 +341,28 @@ export default function OrdersScreen() {
         <Text style={[styles.toolbarTitle, { color: DarkTheme.text }]}>
           Orders ({grouped.length})
         </Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {ordersRequest && (
             <TouchableOpacity
-              style={[styles.navBtn, { backgroundColor: DarkTheme.buy }]}
-              onPress={() => router.push('/order_new')}
+              style={[styles.navBtn, { backgroundColor: DarkTheme.accent }]}
+              onPress={() => router.push('/orders_request')}
             >
-              <Text style={styles.navBtnText}>+ New</Text>
+              <Text style={styles.navBtnText}>🔍 Request</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
-              onPress={onLogout}
-            >
-              <Text style={styles.logoutText}>Logout</Text>
-            </TouchableOpacity>
-          </View>
+          )}
+          <TouchableOpacity
+            style={[styles.navBtn, { backgroundColor: DarkTheme.buy }]}
+            onPress={() => router.push('/order_new')}
+          >
+            <Text style={styles.navBtnText}>+ New</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
+            onPress={onLogout}
+          >
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={[styles.headerRow, { backgroundColor: DarkTheme.headerBg }]}>
@@ -437,9 +446,23 @@ export default function OrdersScreen() {
             scrollEventThrottle={16}
             showsVerticalScrollIndicator
             ListEmptyComponent={
-              <Text style={[styles.empty, { color: DarkTheme.textMuted }]}>
-                No orders yet
-              </Text>
+              ordersRequest ? (
+                <TouchableOpacity
+                  onPress={() => router.push('/orders_request')}
+                  style={styles.emptyTapArea}
+                >
+                  <Text style={[styles.empty, { color: DarkTheme.textMuted }]}>
+                    No orders loaded
+                  </Text>
+                  <Text style={[styles.emptyHint, { color: DarkTheme.accent }]}>
+                    Tap 🔍 above to request orders
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={[styles.empty, { color: DarkTheme.textMuted }]}>
+                  No orders yet
+                </Text>
+              )
             }
           />
         </ScrollView>
@@ -575,4 +598,14 @@ const styles = StyleSheet.create({
   num: { fontFamily: 'monospace', textAlign: 'right' },
 
   empty: { textAlign: 'center', marginTop: 40 },
+
+  emptyTapArea: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyHint: {
+    marginTop: 8,
+    fontSize: 14,
+    textAlign: 'center',
+  },
 });
