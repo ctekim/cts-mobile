@@ -1,5 +1,5 @@
 // app/markets.tsx
-import { useRef, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
   StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
@@ -10,6 +10,12 @@ import { selectTSConnected, selectIsMarketController } from '../src/redux/global
 import { handleLogout } from '../src/services/logout';
 import { formatStatus } from '../src/common/format';
 import { DarkTheme } from '../src/common/theme';
+import {
+  sendMarketChangeStatus,
+  sendMarketCancelAllOrders,
+} from '../src/services/market_messages';
+import { ConfirmDialog } from '../src/components/ConfirmDialog';
+import { STATUS_ACTIVE, STATUS_SUSPEND } from '../src/common/common';
 
 const CODE_WIDTH = 120;
 const ROW_HEIGHT = 36;
@@ -36,6 +42,12 @@ export default function MarketsScreen() {
   const router = useRouter();
   const connected = useAppSelector(selectTSConnected);
   const isMarketController = useAppSelector(selectIsMarketController);
+  const [actionTarget, setActionTarget] = useState<any | null>(null);
+  const [pendingAction, setPendingAction] = useState<
+    | { kind: 'suspend' | 'activate' | 'cancelAll'; market: string; newStatus?: string; withdraw?: 'Y' | 'N' }
+    | null
+  >(null);
+
   const markets = useAppSelector(
     (s: any) => s.tables.tables.MarketsTable ?? EMPTY_ARRAY
   );
@@ -102,6 +114,10 @@ export default function MarketsScreen() {
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
       onPress={() => console.log('[markets] tapped:', item.code)}
+      onLongPress={() => {
+        if (!isMarketController) return;
+        setActionTarget(item);
+      }}
     >
       <Text style={[styles.codeText, { color: DarkTheme.codeText }]} numberOfLines={1}>
         {item.code ?? ''}
@@ -117,6 +133,10 @@ export default function MarketsScreen() {
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
       onPress={() => console.log('[markets] tapped:', item.code)}
+      onLongPress={() => {
+        if (!isMarketController) return;
+        setActionTarget(item);
+      }}      
     >
       {COLUMNS.map((col) => (
         <Text
@@ -235,6 +255,127 @@ export default function MarketsScreen() {
           />
         </ScrollView>
       </View>
+            {actionTarget && (
+        <ConfirmDialog
+          visible={true}
+          title={`Market: ${actionTarget.code}`}
+          message="Choose an action"
+          variant="default"
+          actions={[
+            {
+              label: 'Back',
+              style: 'cancel',
+              onPress: () => {},
+            },
+            {
+              label: 'Cancel All Orders',
+              style: 'destructive',
+              onPress: () => {
+                const code = actionTarget.code;
+                setActionTarget(null);
+                setPendingAction({ kind: 'cancelAll', market: code });
+              },
+            },
+            {
+              label: 'Create New',
+              style: 'success',
+              onPress: () => {
+                setActionTarget(null);
+                router.push('/market_create');
+              },
+            },
+            {
+              label: 'Modify',
+              style: 'success',
+              onPress: () => {
+                const code = actionTarget.code;
+                setActionTarget(null);
+                router.push({ pathname: '/market_modify', params: { code } });
+              },
+            },
+            {
+              label:
+                String(actionTarget.status).toUpperCase() === STATUS_ACTIVE
+                  ? 'Suspend'
+                  : 'Activate',
+              style:
+                String(actionTarget.status).toUpperCase() === STATUS_ACTIVE
+                  ? 'destructive'
+                  : 'success',
+              onPress: () => {
+                const code = actionTarget.code;
+                const current = String(actionTarget.status).toUpperCase();
+                const newStatus =
+                  current === STATUS_ACTIVE ? STATUS_SUSPEND : STATUS_ACTIVE;
+                const withdraw: 'Y' | 'N' =
+                  newStatus === STATUS_SUSPEND ? 'Y' : 'N';
+                setActionTarget(null);
+                setPendingAction({
+                  kind: newStatus === STATUS_SUSPEND ? 'suspend' : 'activate',
+                  market: code,
+                  newStatus,
+                  withdraw,
+                });
+              },
+            },
+          ]}
+          onClose={() => setActionTarget(null)}
+        />
+      )}
+
+      {pendingAction && (
+        <ConfirmDialog
+          visible={true}
+          title="Confirm Action"
+          message={
+            pendingAction.kind === 'cancelAll'
+              ? `Cancel all orders on ${pendingAction.market}?\n\nThis cannot be undone.`
+              : `Set ${pendingAction.market} to ${
+                  pendingAction.kind === 'suspend' ? 'Suspended' : 'Active'
+                }?`
+          }
+          variant="error"
+          accentColor={
+            pendingAction.kind === 'activate'
+              ? DarkTheme.positive
+              : DarkTheme.negative
+          }
+          actions={[
+            {
+              label: 'No',
+              style: 'cancel',
+              onPress: () => {},
+            },
+            {
+              label: 'Confirm',
+              style:
+                pendingAction.kind === 'activate'
+                  ? 'success'
+                  : 'destructive',
+              onPress: () => {
+                const action = pendingAction;
+                setPendingAction(null);
+
+                if (action.kind === 'cancelAll') {
+                  const ok = sendMarketCancelAllOrders(action.market);
+                  if (!ok) console.warn('[markets] not connected');
+                } else if (
+                  action.newStatus !== undefined &&
+                  action.withdraw !== undefined
+                ) {
+                  const ok = sendMarketChangeStatus(
+                    action.market,
+                    action.newStatus,
+                    action.withdraw,
+                  );
+                  if (!ok) console.warn('[markets] not connected');
+                }
+              },
+            },
+          ]}
+          onClose={() => setPendingAction(null)}
+        />
+      )}
     </View>
   );
 }
