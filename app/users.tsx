@@ -1,8 +1,9 @@
 // app/users.tsx
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
-  StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
+  StyleSheet, NativeSyntheticEvent, NativeScrollEvent, Modal,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppSelector } from '../src/redux/hooks';
@@ -15,6 +16,20 @@ import {
   convertToTradingRulesValueName,
   convertConnectionStatus,
 } from '../src/common/user_constants';
+import { ConfirmDialog } from '../src/components/ConfirmDialog';
+import {
+  sendUserChangeStatus,
+  sendUserPassword,
+  sendUserForceLogoff,
+  sendUserCancelAllOrders,
+  sendUserChangeCoordinator,
+  sendUserChangeBackup,
+} from '../src/services/user_messages';
+import {
+  ROLE_DATAFEED_SERVER,
+  ROLE_TRANSACTION_SERVER,
+  ROLE_ALL_IN_ONE_SERVER,
+} from '../src/common/common';
 
 const CODE_WIDTH = 100;
 const ROW_HEIGHT = 36;
@@ -39,11 +54,38 @@ const COLUMNS: ColumnDef[] = [
   { key: 'back',      label: 'Backup',      width: 70,  format: 'yesno' },
   { key: 'check',     label: 'Check',       width: 70,  format: 'yesno' },
   { key: 'dro',       label: 'Del Ords',    width: 70,  format: 'yesno' },
-  { key: 'force_pwd', label: 'Pwd Chg',   width: 70,  format: 'yesno' },
+  { key: 'force_pwd', label: 'Pwd Chg',     width: 70,  format: 'yesno' },
 ];
 
 const TOTAL_DATA_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
 const EMPTY_ARRAY: any[] = [];
+
+const STATUS_ACTIVE_LETTER = 'A';
+const STATUS_SUSPEND_LETTER = 'S';
+
+const ENGINE_ROLES = new Set([
+  Number(ROLE_DATAFEED_SERVER),
+  Number(ROLE_TRANSACTION_SERVER),
+  Number(ROLE_ALL_IN_ONE_SERVER),
+]);
+
+// Engine users = Datafeed / Transaction / All-in-one servers.
+// Mirrors SERVER_ROLES in the web admin form.
+function isEngineUser(user: any): boolean {
+  return ENGINE_ROLES.has(Number(user?.role));
+}
+
+type PendingAction =
+  | { kind: 'confirmStatus'; user: any; newStatus: 'A' | 'S' }
+  | { kind: 'confirmForceLogoff'; user: any }
+  | { kind: 'confirmCancelAll'; user: any }
+  | { kind: 'passwordForm'; user: any }
+  | { kind: 'coordinatorForm'; user: any }
+  | { kind: 'backupForm'; user: any }
+  | { kind: 'confirmPassword'; user: any; password: string }
+  | { kind: 'confirmCoordinator'; user: any; coordinator: string }
+  | { kind: 'confirmBackup'; user: any; backup: string }
+  | null;
 
 export default function UsersScreen() {
   const router = useRouter();
@@ -53,14 +95,25 @@ export default function UsersScreen() {
     (s: any) => s.tables.tables.UsersTable ?? EMPTY_ARRAY
   );
 
+  const [menuTarget, setMenuTarget] = useState<any | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+
+  // Password form
+  const [pwd1, setPwd1] = useState('');
+  const [pwd2, setPwd2] = useState('');
+  const [pwdError, setPwdError] = useState<string | null>(null);
+
+  // Coordinator / Backup form
+  const [enginePick, setEnginePick] = useState<string>('');
+  const [engineError, setEngineError] = useState<string | null>(null);
+
   const leftListRef = useRef<FlatList<any>>(null);
   const headerScrollRef = useRef<ScrollView>(null);
 
-  // Guard: not-super-user gets kicked back to More
-   useEffect(() => {
-   if (!connected) router.replace('/');
-   else if (!isSuperUser) router.replace('/(tabs)/more');
-   }, [connected, isSuperUser, router]);
+  useEffect(() => {
+    if (!connected) router.replace('/');
+    else if (!isSuperUser) router.replace('/(tabs)/more');
+  }, [connected, isSuperUser, router]);
 
   const onLogout = () => {
     handleLogout();
@@ -84,13 +137,11 @@ export default function UsersScreen() {
   const cellText = (item: any, col: ColumnDef): string => {
     const raw = item[col.key];
     if (raw === null || raw === undefined) return '';
-
     switch (col.format) {
       case 'status':   return formatStatus(raw);
       case 'role':     return convertRole(raw);
       case 'yesno':    return convertToTradingRulesValueName(raw);
       case 'c_status': return convertConnectionStatus(raw);
-      case 'text':
       default:         return String(raw);
     }
   };
@@ -117,6 +168,11 @@ export default function UsersScreen() {
     return DarkTheme.text;
   };
 
+  const openMenu = (item: any) => {
+    if (!isSuperUser) return;
+    setMenuTarget(item);
+  };
+
   const renderCodeCell = ({ item, index }: { item: any; index: number }) => (
     <Pressable
       style={({ pressed }) => [
@@ -129,6 +185,7 @@ export default function UsersScreen() {
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
       onPress={() => console.log('[users] tapped:', item.code)}
+      onLongPress={() => openMenu(item)}
     >
       <Text style={[styles.codeText, { color: DarkTheme.codeText }]} numberOfLines={1}>
         {item.code ?? ''}
@@ -144,6 +201,7 @@ export default function UsersScreen() {
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
       onPress={() => console.log('[users] tapped:', item.code)}
+      onLongPress={() => openMenu(item)}
     >
       {COLUMNS.map((col) => (
         <Text
@@ -165,10 +223,58 @@ export default function UsersScreen() {
     </Pressable>
   );
 
+  // ---------- derived menu state ----------
+  const menuStatus = menuTarget ? String(menuTarget.status ?? '').toUpperCase() : '';
+  const menuIsActive = menuStatus === STATUS_ACTIVE_LETTER;
+  const menuStatusLabel = menuIsActive ? 'Suspend' : 'Activate';
+
+  // engine users for coordinator/backup
+  const engineUsers = useMemo(() => users.filter(isEngineUser), [users]);
+
+  // ---------- form openers ----------
+  const openPasswordForm = (user: any) => {
+    setPwd1('');
+    setPwd2('');
+    setPwdError(null);
+    setPendingAction({ kind: 'passwordForm', user });
+  };
+
+  const submitPasswordForm = () => {
+    if (!pwd1) return setPwdError('Password is required');
+    if (!pwd2) return setPwdError('Confirmation password is required');
+    if (pwd1 !== pwd2) return setPwdError('Passwords do not match');
+    setPwdError(null);
+    setPendingAction({ kind: 'confirmPassword', user: (pendingAction as any).user, password: pwd1 });
+  };
+
+  const openCoordinatorForm = (user: any) => {
+    setEnginePick('');
+    setEngineError(null);
+    setPendingAction({ kind: 'coordinatorForm', user });
+  };
+
+  const submitCoordinatorForm = () => {
+    if (!enginePick) return setEngineError('Choose an engine user');
+    setEngineError(null);
+    setPendingAction({ kind: 'confirmCoordinator', user: (pendingAction as any).user, coordinator: enginePick });
+  };
+
+  const openBackupForm = (user: any) => {
+    setEnginePick('');
+    setEngineError(null);
+    setPendingAction({ kind: 'backupForm', user });
+  };
+
+  const submitBackupForm = () => {
+    if (!enginePick) return setEngineError('Choose an engine user');
+    setEngineError(null);
+    setPendingAction({ kind: 'confirmBackup', user: (pendingAction as any).user, backup: enginePick });
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: DarkTheme.background }]}>
       <View style={styles.toolbar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
           <Text style={[styles.backText, { color: DarkTheme.codeText }]}>‹ Back</Text>
         </TouchableOpacity>
         <Text style={[styles.toolbarTitle, { color: DarkTheme.text }]}>
@@ -262,6 +368,429 @@ export default function UsersScreen() {
           />
         </ScrollView>
       </View>
+
+      {/* ---------------- Row action menu ---------------- */}
+      {menuTarget && (
+        <ConfirmDialog
+          visible={true}
+          title={`User: ${menuTarget.code}`}
+          message="Choose an action"
+          variant="default"
+          actions={[
+            {
+              label: 'Back',
+              style: 'cancel',
+              onPress: () => setMenuTarget(null),
+            },
+            {
+              label: menuStatusLabel,
+              style: menuIsActive ? 'destructive' : 'success',
+              onPress: () => {
+                const u = menuTarget;
+                const newStatus: 'A' | 'S' = menuIsActive ? 'S' : 'A';
+                setMenuTarget(null);
+                setPendingAction({ kind: 'confirmStatus', user: u, newStatus });
+              },
+            },
+            {
+              label: 'Set Password',
+              style: 'success',
+              onPress: () => {
+                const u = menuTarget;
+                setMenuTarget(null);
+                openPasswordForm(u);
+              },
+            },
+            {
+              label: 'Force Logoff',
+              style: 'destructive',
+              onPress: () => {
+                const u = menuTarget;
+                setMenuTarget(null);
+                setPendingAction({ kind: 'confirmForceLogoff', user: u });
+              },
+            },
+            {
+              label: 'Cancel All Orders',
+              style: 'destructive',
+              onPress: () => {
+                const u = menuTarget;
+                setMenuTarget(null);
+                setPendingAction({ kind: 'confirmCancelAll', user: u });
+              },
+            },
+            {
+              label: 'Set Coordinator',
+              style: 'success',
+              onPress: () => {
+                const u = menuTarget;
+                setMenuTarget(null);
+                openCoordinatorForm(u);
+              },
+            },
+            {
+              label: 'Set Backup',
+              style: 'success',
+              onPress: () => {
+                const u = menuTarget;
+                setMenuTarget(null);
+                openBackupForm(u);
+              },
+            },
+            {
+              label: 'Modify',
+              style: 'success',
+              onPress: () => {
+                const code = menuTarget.code;
+                setMenuTarget(null);
+                router.push({ pathname: '/user_modify', params: { code: String(code) } });
+              },
+            },
+            {
+              label: 'Create New',
+              style: 'success',
+              onPress: () => {
+                setMenuTarget(null);
+                router.push('/user_create');
+              },
+            },
+          ]}
+          onClose={() => setMenuTarget(null)}
+        />
+      )}
+
+      {/* ---------------- Confirm Status ---------------- */}
+      {pendingAction?.kind === 'confirmStatus' && (
+        <ConfirmDialog
+          visible={true}
+          title="Confirm Status Change"
+          message={`Set user ${pendingAction.user.code} to ${
+            pendingAction.newStatus === STATUS_SUSPEND_LETTER ? 'Suspended' : 'Active'
+          }?`}
+          variant="error"
+          accentColor={
+            pendingAction.newStatus === STATUS_ACTIVE_LETTER
+              ? DarkTheme.positive
+              : DarkTheme.negative
+          }
+          actions={[
+            { label: 'No', style: 'cancel', onPress: () => {} },
+            {
+              label: 'Confirm',
+              style:
+                pendingAction.newStatus === STATUS_ACTIVE_LETTER
+                  ? 'success'
+                  : 'destructive',
+              onPress: () => {
+                const u = pendingAction.user;
+                const ns = pendingAction.newStatus;
+                // suspend → withdraw 'Y' ; activate → 'N'
+                const withdraw: 'Y' | 'N' = ns === STATUS_SUSPEND_LETTER ? 'Y' : 'N';
+                setPendingAction(null);
+                const ok = sendUserChangeStatus(u.code, ns, withdraw);
+                if (!ok) console.warn('[users] not connected');
+              },
+            },
+          ]}
+          onClose={() => setPendingAction(null)}
+        />
+      )}
+
+      {/* ---------------- Confirm Force Logoff ---------------- */}
+      {pendingAction?.kind === 'confirmForceLogoff' && (
+        <ConfirmDialog
+          visible={true}
+          title="Force Logoff"
+          message={`Force logoff of user ${pendingAction.user.code}?\n\nThis cannot be undone.`}
+          variant="error"
+          accentColor={DarkTheme.negative}
+          actions={[
+            { label: 'No', style: 'cancel', onPress: () => {} },
+            {
+              label: 'Confirm',
+              style: 'destructive',
+              onPress: () => {
+                const u = pendingAction.user;
+                setPendingAction(null);
+                const ok = sendUserForceLogoff(u.code);
+                if (!ok) console.warn('[users] not connected');
+              },
+            },
+          ]}
+          onClose={() => setPendingAction(null)}
+        />
+      )}
+
+      {/* ---------------- Confirm Cancel All Orders ---------------- */}
+      {pendingAction?.kind === 'confirmCancelAll' && (
+        <ConfirmDialog
+          visible={true}
+          title="Cancel All Orders"
+          message={`Cancel all orders for user ${pendingAction.user.code}?\n\nThis cannot be undone.`}
+          variant="error"
+          accentColor={DarkTheme.negative}
+          actions={[
+            { label: 'No', style: 'cancel', onPress: () => {} },
+            {
+              label: 'Confirm',
+              style: 'destructive',
+              onPress: () => {
+                const u = pendingAction.user;
+                setPendingAction(null);
+                const ok = sendUserCancelAllOrders(u.code);
+                if (!ok) console.warn('[users] not connected');
+              },
+            },
+          ]}
+          onClose={() => setPendingAction(null)}
+        />
+      )}
+
+      {/* ---------------- Password form ---------------- */}
+      {pendingAction?.kind === 'passwordForm' && (
+        <Modal transparent animationType="fade" visible onRequestClose={() => setPendingAction(null)}>
+          <View style={styles.modalBackdrop}>
+            <View style={[styles.modalCard, { backgroundColor: DarkTheme.surface }]}>
+              <Text style={[styles.modalTitle, { color: DarkTheme.text }]}>
+                Set Password — {pendingAction.user.code}
+              </Text>
+
+              <Text style={[styles.label, { color: DarkTheme.textMuted }]}>Password</Text>
+              <TextInput
+                style={[styles.input, { color: DarkTheme.text, borderColor: DarkTheme.cellBorder }]}
+                secureTextEntry
+                autoCapitalize="none"
+                value={pwd1}
+                onChangeText={setPwd1}
+              />
+
+              <Text style={[styles.label, { color: DarkTheme.textMuted }]}>Repeat Password</Text>
+              <TextInput
+                style={[styles.input, { color: DarkTheme.text, borderColor: DarkTheme.cellBorder }]}
+                secureTextEntry
+                autoCapitalize="none"
+                value={pwd2}
+                onChangeText={setPwd2}
+              />
+
+              {pwdError && (
+                <Text style={{ color: DarkTheme.negative, marginTop: 8 }}>{pwdError}</Text>
+              )}
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalBtn, { backgroundColor: DarkTheme.surfaceAlt }]}
+                  onPress={() => setPendingAction(null)}
+                >
+                  <Text style={{ color: DarkTheme.text, fontWeight: 'bold' }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalBtn, { backgroundColor: DarkTheme.positive }]}
+                  onPress={submitPasswordForm}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Next</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* ---------------- Confirm Password ---------------- */}
+      {pendingAction?.kind === 'confirmPassword' && (
+        <ConfirmDialog
+          visible={true}
+          title="Confirm Password Change"
+          message={`Set password for user ${pendingAction.user.code}?`}
+          variant="default"
+          accentColor={DarkTheme.positive}
+          actions={[
+            { label: 'No', style: 'cancel', onPress: () => {} },
+            {
+              label: 'Confirm',
+              style: 'success',
+              onPress: () => {
+                const u = pendingAction.user;
+                const p = pendingAction.password;
+                setPendingAction(null);
+                const ok = sendUserPassword(u.code, p);
+                if (!ok) console.warn('[users] not connected');
+              },
+            },
+          ]}
+          onClose={() => setPendingAction(null)}
+        />
+      )}
+
+      {/* ---------------- Coordinator form ---------------- */}
+      {pendingAction?.kind === 'coordinatorForm' && (
+        <Modal transparent animationType="fade" visible onRequestClose={() => setPendingAction(null)}>
+          <View style={styles.modalBackdrop}>
+            <View style={[styles.modalCard, { backgroundColor: DarkTheme.surface }]}>
+              <Text style={[styles.modalTitle, { color: DarkTheme.text }]}>
+                Set Coordinator — {pendingAction.user.code}
+              </Text>
+
+              <Text style={[styles.label, { color: DarkTheme.textMuted }]}>Engine User</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {engineUsers.length === 0 && (
+                  <Text style={{ color: DarkTheme.textMuted }}>No engine users found</Text>
+                )}
+                {engineUsers.map((u: any) => {
+                  const selected = enginePick === u.code;
+                  return (
+                    <TouchableOpacity
+                      key={u.code}
+                      onPress={() => setEnginePick(u.code)}
+                      style={[
+                        styles.radio,
+                        {
+                          borderColor: selected ? DarkTheme.accent : DarkTheme.cellBorder,
+                          backgroundColor: selected ? DarkTheme.surfacePressed : 'transparent',
+                        },
+                      ]}
+                    >
+                      <Text style={{ color: selected ? DarkTheme.accent : DarkTheme.text }}>
+                        {u.code}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {engineError && (
+                <Text style={{ color: DarkTheme.negative, marginTop: 8 }}>{engineError}</Text>
+              )}
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalBtn, { backgroundColor: DarkTheme.surfaceAlt }]}
+                  onPress={() => setPendingAction(null)}
+                >
+                  <Text style={{ color: DarkTheme.text, fontWeight: 'bold' }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalBtn, { backgroundColor: DarkTheme.positive }]}
+                  onPress={submitCoordinatorForm}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Next</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* ---------------- Confirm Coordinator ---------------- */}
+      {pendingAction?.kind === 'confirmCoordinator' && (
+        <ConfirmDialog
+          visible={true}
+          title="Confirm Coordinator Change"
+          message={`Set coordinator of ${pendingAction.user.code} to ${pendingAction.coordinator}?`}
+          variant="error"
+          accentColor={DarkTheme.positive}
+          actions={[
+            { label: 'No', style: 'cancel', onPress: () => {} },
+            {
+              label: 'Confirm',
+              style: 'success',
+              onPress: () => {
+                const target = pendingAction.user.code;      // the user we long-pressed
+                const c = pendingAction.coordinator;         // the picked engine user
+                setPendingAction(null);
+                const ok = sendUserChangeCoordinator(target, c);
+                if (!ok) console.warn('[users] not connected');
+              },
+            },
+          ]}
+          onClose={() => setPendingAction(null)}
+        />
+      )}
+
+      {/* ---------------- Backup form ---------------- */}
+      {pendingAction?.kind === 'backupForm' && (
+        <Modal transparent animationType="fade" visible onRequestClose={() => setPendingAction(null)}>
+          <View style={styles.modalBackdrop}>
+            <View style={[styles.modalCard, { backgroundColor: DarkTheme.surface }]}>
+              <Text style={[styles.modalTitle, { color: DarkTheme.text }]}>
+                Set Backup — {pendingAction.user.code}
+              </Text>
+
+              <Text style={[styles.label, { color: DarkTheme.textMuted }]}>Engine User</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {engineUsers.length === 0 && (
+                  <Text style={{ color: DarkTheme.textMuted }}>No engine users found</Text>
+                )}
+                {engineUsers.map((u: any) => {
+                  const selected = enginePick === u.code;
+                  return (
+                    <TouchableOpacity
+                      key={u.code}
+                      onPress={() => setEnginePick(u.code)}
+                      style={[
+                        styles.radio,
+                        {
+                          borderColor: selected ? DarkTheme.accent : DarkTheme.cellBorder,
+                          backgroundColor: selected ? DarkTheme.surfacePressed : 'transparent',
+                        },
+                      ]}
+                    >
+                      <Text style={{ color: selected ? DarkTheme.accent : DarkTheme.text }}>
+                        {u.code}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {engineError && (
+                <Text style={{ color: DarkTheme.negative, marginTop: 8 }}>{engineError}</Text>
+              )}
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalBtn, { backgroundColor: DarkTheme.surfaceAlt }]}
+                  onPress={() => setPendingAction(null)}
+                >
+                  <Text style={{ color: DarkTheme.text, fontWeight: 'bold' }}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalBtn, { backgroundColor: DarkTheme.positive }]}
+                  onPress={submitBackupForm}
+                >
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Next</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* ---------------- Confirm Backup ---------------- */}
+      {pendingAction?.kind === 'confirmBackup' && (
+        <ConfirmDialog
+          visible={true}
+          title="Confirm Backup Change"
+          message={`Set backup of ${pendingAction.user.code} to ${pendingAction.backup}?`}
+          variant="error"
+          accentColor={DarkTheme.positive}
+          actions={[
+            { label: 'No', style: 'cancel', onPress: () => {} },
+            {
+              label: 'Confirm',
+              style: 'success',
+              onPress: () => {
+                const target = pendingAction.user.code;      // the user we long-pressed
+                const b = pendingAction.backup;              // the picked engine user
+                setPendingAction(null);
+                const ok = sendUserChangeBackup(target, b);
+                if (!ok) console.warn('[users] not connected');
+              },
+            },
+          ]}
+          onClose={() => setPendingAction(null)}
+        />
+      )}
     </View>
   );
 }
@@ -276,7 +805,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   toolbarTitle: { fontSize: 18, fontWeight: 'bold' },
-  backBtn: { paddingVertical: 6, paddingHorizontal: 4, width: 60 },
+  backBtn: { paddingVertical: 6, paddingHorizontal: 4, width: 60, justifyContent: 'center' },
   backText: { fontSize: 16, fontWeight: 'bold' },
   logoutBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 },
   logoutText: { color: '#fff', fontWeight: 'bold' },
@@ -315,4 +844,44 @@ const styles = StyleSheet.create({
   },
 
   empty: { textAlign: 'center', marginTop: 40 },
+
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 10,
+    padding: 16,
+  },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
+  label: { fontSize: 12, marginTop: 8, marginBottom: 4 },
+  input: {
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 14,
+  },
+  radio: {
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 16,
+  },
+  modalBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
 });
