@@ -1,5 +1,5 @@
 // app/instruments.tsx
-import { useRef, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
   StyleSheet, NativeSyntheticEvent, NativeScrollEvent, Alert
@@ -15,6 +15,13 @@ import {
 import { formatPrice, formatQty, formatStatus } from '../../src/common/format';
 import { DarkTheme } from '../../src/common/theme';
 import { Fab } from '../../src/components/Fab';
+import {
+  sendInstrumentChangeStatus,
+  sendInstrumentCancelAllOrders,
+} from '../../src/services/instrument_messages';
+import { STATUS_ACTIVE, STATUS_SUSPEND } from '../../src/common/common';
+import { selectIsMarketController } from '../../src/redux/globalsSlice';
+import { ConfirmDialog } from '../../src/components/ConfirmDialog';
 
 const CODE_WIDTH = 90;
 const ROW_HEIGHT = 36;
@@ -42,42 +49,44 @@ type ColumnDef = typeof COLUMNS[number];
 const TOTAL_DATA_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
 
 export default function InstrumentsScreen() {
-  const router = useRouter();
-  const instrumentMap = useAppSelector(selectTableData);
-  const rows = Object.values(instrumentMap).filter((r) => {
-    const t = Number(r.i_type);
-    return (
-      t !== INSTRUMENT_TYPE_CURRENCY &&
-      t !== INSTRUMENT_TYPE_CRYPTO_CURRENCY
-    );
-  });
+   const router = useRouter();
+   const instrumentMap = useAppSelector(selectTableData);
+   const rows = Object.values(instrumentMap).filter((r) => {
+      const t = Number(r.i_type);
+      return (
+         t !== INSTRUMENT_TYPE_CURRENCY &&
+         t !== INSTRUMENT_TYPE_CRYPTO_CURRENCY
+      );
+   });
 
-  const connected = useAppSelector(selectTSConnected);
-  const leftListRef = useRef<FlatList<any>>(null);
-  const headerScrollRef = useRef<ScrollView>(null);
+   const connected = useAppSelector(selectTSConnected);
+      const isMarketController = useAppSelector(selectIsMarketController);
+   const [actionTarget, setActionTarget] = useState<any | null>(null);
+   const leftListRef = useRef<FlatList<any>>(null);
+   const headerScrollRef = useRef<ScrollView>(null);
 
-  useEffect(() => {
-    if (!connected) router.replace('/');
-  }, [connected, router]);
+   useEffect(() => {
+      if (!connected) router.replace('/');
+   }, [connected, router]);
 
-  const onLogout = () => {
-    handleLogout();
-    router.replace('/');
-  };
+   const onLogout = () => {
+      handleLogout();
+      router.replace('/');
+   };
 
-  const handleDataVerticalScroll = (
-    e: NativeSyntheticEvent<NativeScrollEvent>
-  ) => {
-    const y = e.nativeEvent.contentOffset.y;
-    leftListRef.current?.scrollToOffset({ offset: y, animated: false });
-  };
+   const handleDataVerticalScroll = (
+      e: NativeSyntheticEvent<NativeScrollEvent>
+   ) => {
+      const y = e.nativeEvent.contentOffset.y;
+      leftListRef.current?.scrollToOffset({ offset: y, animated: false });
+   };
 
-  const handleDataHorizontalScroll = (
-    e: NativeSyntheticEvent<NativeScrollEvent>
-  ) => {
-    const x = e.nativeEvent.contentOffset.x;
-    headerScrollRef.current?.scrollTo({ x, animated: false });
-  };
+   const handleDataHorizontalScroll = (
+      e: NativeSyntheticEvent<NativeScrollEvent>
+   ) => {
+      const x = e.nativeEvent.contentOffset.x;
+      headerScrollRef.current?.scrollTo({ x, animated: false });
+   };
 
    // ---- Code column color (based on status) ----
    const codeColor = (item: any): string => {
@@ -172,7 +181,11 @@ export default function InstrumentsScreen() {
                router.push({ pathname: '/order_book', params: { instr: item.code } });
             }}
             onLongPress={() => {
-               router.push({ pathname: '/order_new', params: { instr: item.code } });
+              if (isMarketController) {
+                setActionTarget(item);
+              } else {
+                router.push({ pathname: '/order_new', params: { instr: item.code } });
+              }
             }}
          >
          {COLUMNS.map((col) => (
@@ -292,12 +305,69 @@ export default function InstrumentsScreen() {
             />
          </ScrollView>
          </View>
-         <Fab onPress={() => router.push('/order_new')} />
-      </View>
-   );
-   }
+            <Fab onPress={() => router.push('/order_new')} />
 
-   const styles = StyleSheet.create({
+            {actionTarget && (
+               <ConfirmDialog
+                  visible={true}
+                  title={`Instrument: ${actionTarget.code}`}
+                  message="Choose an action"
+                  variant="default"
+                  actions={[
+                     {
+                        label: 'Cancel',
+                        style: 'cancel',
+                        onPress: () => {},
+                     },
+                     {
+                        label: 'Cancel All Orders',
+                        style: 'destructive',
+                        onPress: () => {
+                           const code = actionTarget.code;
+                           setActionTarget(null);
+                           const ok = sendInstrumentCancelAllOrders(code);
+                           if (!ok) console.warn('[instruments] not connected');
+                        },
+                     },
+                     {
+                        label: 'Trade Entry',
+                        style: 'default',
+                        onPress: () => {
+                           const code = actionTarget.code;
+                           setActionTarget(null);
+                           router.push({ pathname: '/trade_entry', params: { instr: code } });
+                        },
+                     },
+                     {
+                        label:
+                           String(actionTarget.status).toUpperCase() === STATUS_ACTIVE
+                              ? 'Suspend'
+                              : 'Activate',
+                        style:
+                           String(actionTarget.status).toUpperCase() === STATUS_ACTIVE
+                              ? 'destructive'
+                              : 'default',
+                        onPress: () => {
+                           const code = actionTarget.code;
+                           const current = String(actionTarget.status).toUpperCase();
+                           const newStatus =
+                              current === STATUS_ACTIVE ? STATUS_SUSPEND : STATUS_ACTIVE;
+                           const withdraw: 'Y' | 'N' =
+                              newStatus === STATUS_SUSPEND ? 'Y' : 'N';
+                           setActionTarget(null);
+                           const ok = sendInstrumentChangeStatus(code, newStatus, withdraw);
+                           if (!ok) console.warn('[instruments] not connected');
+                        },
+                     },
+                  ]}
+                  onClose={() => setActionTarget(null)}
+               />
+            )}
+         </View>
+      );
+}
+
+const styles = StyleSheet.create({
    container: { flex: 1, paddingTop: 40 },
 
    toolbar: {

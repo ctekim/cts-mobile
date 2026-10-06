@@ -215,4 +215,8 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   chevron: { fontSize: 22, fontWeight: '300' },
+  userName: {
+    fontSize: 13,
+    fontFamily: 'monospace',
+  },
 });

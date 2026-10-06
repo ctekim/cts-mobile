@@ -54,6 +54,7 @@ const titleColor =
             style={[
               styles.actions,
               actions.length === 1 && { justifyContent: 'center' },
+              actions.length >= 3 && styles.actionsColumn,
             ]}
           >
             {actions.map((action, idx) => {
@@ -131,10 +132,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 20,
   },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
+  actionsColumn: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
   },
   button: {
     paddingHorizontal: 18,
@@ -142,9 +142,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     minWidth: 90,
     alignItems: 'center',
+    alignSelf: 'stretch',
   },
   buttonText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  actions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
   },
 });
