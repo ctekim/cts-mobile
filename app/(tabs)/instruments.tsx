@@ -60,8 +60,12 @@ export default function InstrumentsScreen() {
    });
 
    const connected = useAppSelector(selectTSConnected);
-      const isMarketController = useAppSelector(selectIsMarketController);
+   const isMarketController = useAppSelector(selectIsMarketController);
    const [actionTarget, setActionTarget] = useState<any | null>(null);
+   const [pendingAction, setPendingAction] = useState<
+      | { kind: 'suspend' | 'activate' | 'cancelAll'; instrument: string; newStatus?: string; withdraw?: 'Y' | 'N' }
+      | null
+      >(null);
    const leftListRef = useRef<FlatList<any>>(null);
    const headerScrollRef = useRef<ScrollView>(null);
 
@@ -315,7 +319,7 @@ export default function InstrumentsScreen() {
                   variant="default"
                   actions={[
                      {
-                        label: 'Cancel',
+                        label: 'Back',
                         style: 'cancel',
                         onPress: () => {},
                      },
@@ -325,13 +329,12 @@ export default function InstrumentsScreen() {
                         onPress: () => {
                            const code = actionTarget.code;
                            setActionTarget(null);
-                           const ok = sendInstrumentCancelAllOrders(code);
-                           if (!ok) console.warn('[instruments] not connected');
+                           setPendingAction({ kind: 'cancelAll', instrument: code });
                         },
                      },
                      {
                         label: 'Trade Entry',
-                        style: 'default',
+                        style: 'success',
                         onPress: () => {
                            const code = actionTarget.code;
                            setActionTarget(null);
@@ -346,7 +349,7 @@ export default function InstrumentsScreen() {
                         style:
                            String(actionTarget.status).toUpperCase() === STATUS_ACTIVE
                               ? 'destructive'
-                              : 'default',
+                              : 'success',
                         onPress: () => {
                            const code = actionTarget.code;
                            const current = String(actionTarget.status).toUpperCase();
@@ -355,12 +358,70 @@ export default function InstrumentsScreen() {
                            const withdraw: 'Y' | 'N' =
                               newStatus === STATUS_SUSPEND ? 'Y' : 'N';
                            setActionTarget(null);
-                           const ok = sendInstrumentChangeStatus(code, newStatus, withdraw);
-                           if (!ok) console.warn('[instruments] not connected');
+                           setPendingAction({
+                              kind: newStatus === STATUS_SUSPEND ? 'suspend' : 'activate',
+                              instrument: code,
+                              newStatus,
+                              withdraw,
+                           });
                         },
                      },
                   ]}
                   onClose={() => setActionTarget(null)}
+               />
+            )}
+
+            {pendingAction && (
+               <ConfirmDialog
+                  visible={true}
+                  title="Confirm Action"
+                  message={
+                     pendingAction.kind === 'cancelAll'
+                        ? `Cancel all orders on ${pendingAction.instrument}?\n\nThis cannot be undone.`
+                        : `Set ${pendingAction.instrument} to ${
+                             pendingAction.kind === 'suspend' ? 'Suspended' : 'Active'
+                          }?`
+                  }
+                  variant="error"
+                  accentColor={
+                     pendingAction.kind === 'activate'
+                        ? DarkTheme.positive
+                        : DarkTheme.negative
+                  }
+                  actions={[
+                     {
+                        label: 'No',
+                        style: 'cancel',
+                        onPress: () => {},
+                     },
+                     {
+                        label: 'Confirm',
+                        style:
+                           pendingAction.kind === 'activate'
+                              ? 'success'
+                              : 'destructive',
+                        onPress: () => {
+                           const action = pendingAction;
+                           setPendingAction(null);
+
+                           if (action.kind === 'cancelAll') {
+                              const ok = sendInstrumentCancelAllOrders(action.instrument);
+                              if (!ok) console.warn('[instruments] not connected');
+                           } else if (
+                              action.newStatus !== undefined &&
+                              action.withdraw !== undefined
+                           ) {
+                              const ok = sendInstrumentChangeStatus(
+                                 action.instrument,
+                                 action.newStatus,
+                                 action.withdraw,
+                              );
+                              if (!ok) console.warn('[instruments] not connected');
+                           }
+                        },
+                     },
+                  ]}
+                  onClose={() => setPendingAction(null)}
                />
             )}
          </View>

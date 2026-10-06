@@ -1,5 +1,5 @@
 // app/exchanges.tsx
-import { useRef, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
   StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
@@ -10,6 +10,9 @@ import { selectTSConnected, selectIsMarketController } from '../src/redux/global
 import { handleLogout } from '../src/services/logout';
 import { formatStatus } from '../src/common/format';
 import { DarkTheme } from '../src/common/theme';
+import { sendExchangeChangeStatus, sendExchangeCancelAllOrders } from '../src/services/exchange_messages';
+import { ConfirmDialog } from '../src/components/ConfirmDialog';
+import { STATUS_ACTIVE, STATUS_SUSPEND } from '../src/common/common';
 
 const CODE_WIDTH = 100;
 const ROW_HEIGHT = 36;
@@ -34,11 +37,15 @@ const EMPTY_ARRAY: any[] = [];
 export default function ExchangesScreen() {
   const router = useRouter();
   const connected = useAppSelector(selectTSConnected);
+  const [actionTarget, setActionTarget] = useState<any | null>(null);
   const isMarketController = useAppSelector(selectIsMarketController);
   const exchanges = useAppSelector(
     (s: any) => s.tables.tables.ExchangesTable ?? EMPTY_ARRAY
   );
-
+  const [pendingAction, setPendingAction] = useState<
+    | { kind: 'suspend' | 'activate' | 'cancelAll'; exchange: string; newStatus?: string; withdraw?: 'Y' | 'N' }
+    | null
+    >(null);
   const leftListRef = useRef<FlatList<any>>(null);
   const headerScrollRef = useRef<ScrollView>(null);
 
@@ -107,6 +114,10 @@ export default function ExchangesScreen() {
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
       onPress={() => console.log('[exchanges] tapped:', item.code)}
+      onLongPress={() => {
+        if (!isMarketController) return;
+        setActionTarget(item);
+      }}
     >
       <Text style={[styles.codeText, { color: DarkTheme.codeText }]} numberOfLines={1}>
         {item.code ?? ''}
@@ -122,6 +133,10 @@ export default function ExchangesScreen() {
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
       onPress={() => console.log('[exchanges] tapped:', item.code)}
+      onLongPress={() => {
+        if (!isMarketController) return;
+        setActionTarget(item);
+      }}
     >
       {COLUMNS.map((col) => (
         <Text
@@ -240,6 +255,129 @@ export default function ExchangesScreen() {
           />
         </ScrollView>
       </View>
+
+        {actionTarget && (
+        <ConfirmDialog
+          visible={true}
+          title={`Exchange: ${actionTarget.code}`}
+          message="Choose an action"
+          variant="default"
+          actions={[
+            {
+              label: 'Back',
+              style: 'cancel',
+              onPress: () => {},
+            },
+            {
+              label: 'Cancel All Orders',
+              style: 'destructive',
+              onPress: () => {
+                const code = actionTarget.code;
+                setActionTarget(null);
+                setPendingAction({ kind: 'cancelAll', exchange: code });
+              },
+            },
+            {
+              label: 'Create New',
+              style: 'success',
+              onPress: () => {
+                setActionTarget(null);
+                router.push('/exchange_create');
+              },
+            },
+            {
+              label: 'Modify',
+              style: 'success',
+              onPress: () => {
+                const code = actionTarget.code;
+                setActionTarget(null);
+                router.push({ pathname: '/exchange_modify', params: { code } });
+              },
+            },
+            {
+              label:
+                String(actionTarget.status).toUpperCase() === STATUS_ACTIVE
+                  ? 'Suspend'
+                  : 'Activate',
+              style:
+                String(actionTarget.status).toUpperCase() === STATUS_ACTIVE
+                  ? 'destructive'
+                  : 'success',
+              onPress: () => {
+                const code = actionTarget.code;
+                const current = String(actionTarget.status).toUpperCase();
+                const newStatus =
+                  current === STATUS_ACTIVE ? STATUS_SUSPEND : STATUS_ACTIVE;
+                const withdraw: 'Y' | 'N' =
+                  newStatus === STATUS_SUSPEND ? 'Y' : 'N';
+                setActionTarget(null);
+                setPendingAction({
+                  kind: newStatus === STATUS_SUSPEND ? 'suspend' : 'activate',
+                  exchange: code,
+                  newStatus,
+                  withdraw,
+                });
+              },
+            },
+          ]}
+          onClose={() => setActionTarget(null)}
+        />
+      )}
+
+      {pendingAction && (
+        <ConfirmDialog
+          visible={true}
+          title="Confirm Action"
+          message={
+            pendingAction.kind === 'cancelAll'
+              ? `Cancel all orders on ${pendingAction.exchange}?\n\nThis cannot be undone.`
+              : `Set ${pendingAction.exchange} to ${
+                  pendingAction.kind === 'suspend' ? 'Suspended' : 'Active'
+                }?`
+          }
+          variant="error"
+          accentColor={
+            pendingAction.kind === 'activate'
+              ? DarkTheme.positive
+              : DarkTheme.negative
+          }
+          actions={[
+            {
+              label: 'No',
+              style: 'cancel',
+              onPress: () => {},
+            },
+            {
+              label: 'Confirm',
+              style:
+                pendingAction.kind === 'activate'
+                  ? 'success'
+                  : 'destructive',
+              onPress: () => {
+                const action = pendingAction;
+                setPendingAction(null);
+
+                if (action.kind === 'cancelAll') {
+                  const ok = sendExchangeCancelAllOrders(action.exchange);
+                  if (!ok) console.warn('[exchanges] not connected');
+                } else if (
+                  action.newStatus !== undefined &&
+                  action.withdraw !== undefined
+                ) {
+                  const ok = sendExchangeChangeStatus(
+                    action.exchange,
+                    action.newStatus,
+                    action.withdraw,
+                  );
+                  if (!ok) console.warn('[exchanges] not connected');
+                }
+              },
+            },
+          ]}
+          onClose={() => setPendingAction(null)}
+        />
+      )}
+
     </View>
   );
 }

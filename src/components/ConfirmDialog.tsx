@@ -7,7 +7,7 @@ import { DarkTheme } from '../common/theme';
 interface Action {
   label: string;
   onPress: () => void;
-  style?: 'default' | 'cancel' | 'destructive';
+  style?: 'default' | 'cancel' | 'destructive' | 'success';
 }
 
 interface Props {
@@ -64,7 +64,9 @@ const titleColor =
                 ? DarkTheme.danger
                 : isCancel
                 ? 'transparent'
-                : accentColor ?? DarkTheme.accent;
+                : action.style === 'success'
+                ? DarkTheme.positive
+                : DarkTheme.accent;
               const borderColor = isCancel ? DarkTheme.cellBorder : bgColor;
               const textColor = isCancel ? DarkTheme.text : '#fff';
 

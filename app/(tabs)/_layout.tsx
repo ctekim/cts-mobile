@@ -48,7 +48,7 @@ export default function TabsLayout() {
         />
         <Tabs.Screen
           name="holdings"
-          options={{ title: 'Hold', tabBarIcon: ({ focused }) => <TabIcon label="💼" focused={focused} /> }}
+          options={{ title: 'Holdings', tabBarIcon: ({ focused }) => <TabIcon label="💼" focused={focused} /> }}
         />
         <Tabs.Screen
           name="notifications"
