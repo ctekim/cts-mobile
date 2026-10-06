@@ -176,6 +176,15 @@ export default function MoreScreen() {
 
         <TouchableOpacity
           style={[styles.row, { borderBottomColor: DarkTheme.cellBorder }]}
+          onPress={() => router.push('/change_password')}
+        >
+          <Text style={styles.icon}>🔑</Text>
+          <Text style={[styles.label, { color: DarkTheme.text }]}>Change Password</Text>
+          <Text style={[styles.chevron, { color: DarkTheme.textMuted }]}>›</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.row, { borderBottomColor: DarkTheme.cellBorder }]}
           onPress={onLogoutPress}
         >
           <Text style={styles.icon}>🚪</Text>

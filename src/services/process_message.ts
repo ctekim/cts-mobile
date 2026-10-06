@@ -69,7 +69,7 @@ import { MSG_TYPE_EXCHANGE_REPLY, MSG_TYPE_MARKET_REPLY, MSGTYPE_HEARTBEAT, MSGT
             MSG_TYPE_USER_FORCE_LOGOFF,
         } from '../common/msg_types';
 
-import { resetGlobals, setForcePasswordChange, setIsMarketController, setRoleId, setSeqNum, setTSConnected} from '..//redux/globalsSlice';
+import { resetGlobals, selectForcePasswordChange, setForcePasswordChange, setIsMarketController, setRoleId, setSeqNum, setTSConnected} from '..//redux/globalsSlice';
 import { closeTSConnection } from './ts_connection';
 import { Dispatch } from '@reduxjs/toolkit';
 import { showResult } from '../redux/notificationSlice';
@@ -240,6 +240,7 @@ export function ProcessMessage(
                case MSGTYPE_CHANGE_PASSWORD:
                   console.log('Successful changed password');
                   HandleSuccessResult(`Successfully changed password`, true);
+                  dispatch(setForcePasswordChange(false));
                   setLoggedOn(true);
                   break;
 

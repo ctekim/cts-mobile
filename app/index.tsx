@@ -14,9 +14,10 @@ import {
 import { store } from '../src/redux/store';
 import { ProcessMessage } from '../src/services/process_message';
 import { registerCloseHandler } from '../src/services/ts_connection';
-import { setTSUserId, setBSId } from '../src/redux/globalsSlice';
+import { setTSUserId, setBSId, selectForcePasswordChange } from '../src/redux/globalsSlice';
 import { DebugPanel } from '../src/components/DebugPanel';
 import { setWs, setHeartbeat } from '../src/services/ws_state';
+import { useAppSelector } from '../src/redux/hooks';
 
 const TRANSACTION_URL = 'ws://192.168.56.100:9401';
 const HEARTBEAT_INTERVAL = 20000;
@@ -34,12 +35,17 @@ export default function HomeScreen() {
   );
 
   const router = useRouter();
+  const forcePasswordChange = useAppSelector(selectForcePasswordChange);
 
   useEffect(() => {
+    if (forcePasswordChange) {
+      router.replace('/change_password?forced=1');
+      return;
+    }
     if (loggedOn) {
       router.replace('/(tabs)/instruments');
     }
-  }, [loggedOn, router]);
+  }, [loggedOn, forcePasswordChange, router]);
 
   function handleLogin() {
     if (!username || !password) {
