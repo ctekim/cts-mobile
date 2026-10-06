@@ -36,7 +36,6 @@ const STATUS_ACTIVE_LETTER = 'A';
 const STATUS_SUSPEND_LETTER = 'S';
 const STATUS_TRIGGERED_LETTER = 'T';
 
-// Move types — adjust to match your common.ts MOVE_TYPE_* values.
 const MOVE_TYPE_ACTIVE = 'A';
 const MOVE_TYPE_SUSPEND = 'S';
 
@@ -74,13 +73,12 @@ function formatEventTime(raw: any): string {
   return `${p.slice(0, 2)}:${p.slice(2, 4)}:${p.slice(4, 6)}`;
 }
 
-type ActionState =
-  | { kind: 'none' }
-  | { kind: 'menu'; event: any }
+type PendingAction =
   | { kind: 'confirmRun'; event: any }
   | { kind: 'confirmStatus'; event: any; newStatus: 'A' | 'S' }
   | { kind: 'moveForm' }
-  | { kind: 'confirmMove'; hours: number; minutes: number; moveType: string };
+  | { kind: 'confirmMove'; hours: number; minutes: number; moveType: string }
+  | null;
 
 export default function TradingEventsScreen() {
   const router = useRouter();
@@ -90,7 +88,8 @@ export default function TradingEventsScreen() {
     (s: any) => s.tables.tables.TradingEventsTable ?? EMPTY_ARRAY
   );
 
-  const [action, setAction] = useState<ActionState>({ kind: 'none' });
+  const [menuTarget, setMenuTarget] = useState<any | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 
   const [moveHours, setMoveHours] = useState('0');
   const [moveMinutes, setMoveMinutes] = useState('0');
@@ -192,7 +191,7 @@ export default function TradingEventsScreen() {
 
   const openMenu = (item: any) => {
     if (!isMarketController) return;
-    setAction({ kind: 'menu', event: item });
+    setMenuTarget(item);
   };
 
   // ---------- rows ----------
@@ -253,7 +252,7 @@ export default function TradingEventsScreen() {
     setMoveMinutes('0');
     setMoveType(MOVE_TYPE_ACTIVE);
     setMoveError(null);
-    setAction({ kind: 'moveForm' });
+    setPendingAction({ kind: 'moveForm' });
   };
 
   const submitMoveForm = () => {
@@ -262,18 +261,15 @@ export default function TradingEventsScreen() {
     if (isNaN(h) || h < 0) return setMoveError('Hours must be >= 0');
     if (isNaN(m) || m < 0 || m > 59) return setMoveError('Minutes must be 0-59');
     setMoveError(null);
-    setAction({ kind: 'confirmMove', hours: h, minutes: m, moveType });
+    setPendingAction({ kind: 'confirmMove', hours: h, minutes: m, moveType });
   };
 
-  // ---------- menu state values ----------
-  const menuEvent = action.kind === 'menu' ? action.event : null;
-  const triggered = menuEvent ? isTriggered(menuEvent) : false;
-  const statusChangeable = menuEvent ? canChangeStatus(menuEvent) : false;
-  const currentStatus = menuEvent ? statusLetterOf(menuEvent) : '';
-  const menuStatusLabel =
-    currentStatus === STATUS_ACTIVE_LETTER ? 'Suspend'
-    : currentStatus === STATUS_SUSPEND_LETTER ? 'Activate'
-    : 'Status';
+  // ---------- derived menu state ----------
+  const menuTriggered = menuTarget ? isTriggered(menuTarget) : false;
+  const menuStatusChangeable = menuTarget ? canChangeStatus(menuTarget) : false;
+  const menuCurrentStatus = menuTarget ? statusLetterOf(menuTarget) : '';
+  const menuStatusIsActive = menuCurrentStatus === STATUS_ACTIVE_LETTER;
+  const menuStatusLabel = menuStatusIsActive ? 'Suspend' : 'Activate';
 
   return (
     <View style={[styles.container, { backgroundColor: DarkTheme.background }]}>
@@ -373,101 +369,88 @@ export default function TradingEventsScreen() {
         </ScrollView>
       </View>
 
-      {/* ---------------- Row action menu (custom modal for disabled states) ---------------- */}
-      {action.kind === 'menu' && menuEvent && (
-        <Modal transparent animationType="fade" visible onRequestClose={() => setAction({ kind: 'none' })}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setAction({ kind: 'none' })}>
-            <Pressable
-              style={[styles.modalCard, { backgroundColor: DarkTheme.surface }]}
-              onPress={() => { /* swallow */ }}
-            >
-              <Text style={[styles.modalTitle, { color: DarkTheme.text }]}>
-                Event: {menuEvent.code ?? menuEvent.id}
-              </Text>
-              <Text style={{ color: DarkTheme.textMuted, marginBottom: 12 }}>
-                Status: {convertEventStatus(menuEvent.status)}
-                {triggered ? ' — locked' : ''}
-              </Text>
-
-              {/* Back — first item */}
-              <MenuItem
-                label="Back"
-                color={DarkTheme.codeText}
-                onPress={() => setAction({ kind: 'none' })}
-              />
-
-              {/* Suspend / Activate */}
-              <MenuItem
-                label={menuStatusLabel}
-                disabled={!statusChangeable}
-                color={
-                  currentStatus === STATUS_ACTIVE_LETTER
-                    ? DarkTheme.negative
-                    : DarkTheme.positive
-                }
-                onPress={() => {
-                  if (!statusChangeable) return;
-                  const newStatus: 'A' | 'S' =
-                    currentStatus === STATUS_ACTIVE_LETTER
-                      ? (STATUS_SUSPEND_LETTER as 'S')
-                      : (STATUS_ACTIVE_LETTER as 'A');
-                  setAction({ kind: 'confirmStatus', event: menuEvent, newStatus });
-                }}
-              />
-
-              {/* Run */}
-              <MenuItem
-                label="Run"
-                disabled={triggered}
-                color={DarkTheme.positive}
-                onPress={() => {
-                  if (triggered) return;
-                  setAction({ kind: 'confirmRun', event: menuEvent });
-                }}
-              />
-
-              {/* Modify */}
-              <MenuItem
-                label="Modify"
-                disabled={triggered}
-                color={DarkTheme.accent}
-                onPress={() => {
-                  if (triggered) return;
-                  const id = menuEvent.id;
-                  setAction({ kind: 'none' });
-                  router.push({ pathname: '/trading_event_modify', params: { id: String(id) } });
-                }}
-              />
-
-              <View style={[styles.divider, { backgroundColor: DarkTheme.cellBorder }]} />
-
-              {/* Create */}
-              <MenuItem
-                label="Create New"
-                color={DarkTheme.positive}
-                onPress={() => {
-                  setAction({ kind: 'none' });
-                  router.push('/trading_event_create');
-                }}
-              />
-
-              {/* Move */}
-              <MenuItem
-                label="Move All Events"
-                color={DarkTheme.accent}
-                onPress={openMoveForm}
-              />
-            </Pressable>
-          </Pressable>
-        </Modal>
+      {/* ---------------- Row action menu ---------------- */}
+      {menuTarget && (
+        <ConfirmDialog
+          visible={true}
+          title={`Event: ${menuTarget.code ?? menuTarget.id}`}
+          message={
+            menuTriggered
+              ? `Status: ${convertEventStatus(menuTarget.status)} — status, run and modify are locked`
+              : 'Choose an action'
+          }
+          variant="default"
+          actions={[
+            {
+              label: 'Back',
+              style: 'cancel',
+              onPress: () => setMenuTarget(null),
+            },
+            ...(menuTriggered
+              ? []
+              : [
+                  {
+                    label: menuStatusLabel,
+                    style: (menuStatusIsActive ? 'destructive' : 'success') as
+                      | 'destructive'
+                      | 'success',
+                    onPress: () => {
+                      if (!menuStatusChangeable) return;
+                      const newStatus: 'A' | 'S' =
+                        menuStatusIsActive
+                          ? (STATUS_SUSPEND_LETTER as 'S')
+                          : (STATUS_ACTIVE_LETTER as 'A');
+                      const ev = menuTarget;
+                      setMenuTarget(null);
+                      setPendingAction({ kind: 'confirmStatus', event: ev, newStatus });
+                    },
+                  },
+                  {
+                    label: 'Run',
+                    style: 'success' as const,
+                    onPress: () => {
+                      const ev = menuTarget;
+                      setMenuTarget(null);
+                      setPendingAction({ kind: 'confirmRun', event: ev });
+                    },
+                  },
+                  {
+                    label: 'Modify',
+                    style: 'success' as const,
+                    onPress: () => {
+                      const id = menuTarget.id;
+                      setMenuTarget(null);
+                      router.push({ pathname: '/trading_event_modify', params: { id: String(id) } });
+                    },
+                  },
+                ]),
+            {
+              label: 'Create New',
+              style: 'success',
+              onPress: () => {
+                setMenuTarget(null);
+                router.push('/trading_event_create');
+              },
+            },
+            {
+              label: 'Move All Events',
+              style: 'success',
+              onPress: () => {
+                setMenuTarget(null);
+                openMoveForm();
+              },
+            },
+          ]}
+          onClose={() => setMenuTarget(null)}
+        />
       )}
 
       {/* ---------------- Confirm Run ---------------- */}
-      {action.kind === 'confirmRun' && (
+      {pendingAction?.kind === 'confirmRun' && (
         <ConfirmDialog
           visible={true}
           title="Run Trading Event"
-          message={`Run event ${action.event.code ?? action.event.id} immediately?\n\nThis cannot be undone.`}
+          message={`Run event ${pendingAction.event.code ?? pendingAction.event.id} immediately?\n\nThis cannot be undone.`}
           variant="error"
           accentColor={DarkTheme.positive}
           actions={[
@@ -476,28 +459,28 @@ export default function TradingEventsScreen() {
               label: 'Run Now',
               style: 'success',
               onPress: () => {
-                const ev = action.event;
-                setAction({ kind: 'none' });
+                const ev = pendingAction.event;
+                setPendingAction(null);
                 const ok = sendTradingEventRun(Number(ev.id), 'Y');
                 if (!ok) console.warn('[trading_events] not connected');
               },
             },
           ]}
-          onClose={() => setAction({ kind: 'none' })}
+          onClose={() => setPendingAction(null)}
         />
       )}
 
       {/* ---------------- Confirm Status ---------------- */}
-      {action.kind === 'confirmStatus' && (
+      {pendingAction?.kind === 'confirmStatus' && (
         <ConfirmDialog
           visible={true}
           title="Confirm Status Change"
-          message={`Set event ${action.event.code ?? action.event.id} to ${
-            action.newStatus === STATUS_SUSPEND_LETTER ? 'Suspended' : 'Active'
+          message={`Set event ${pendingAction.event.code ?? pendingAction.event.id} to ${
+            pendingAction.newStatus === STATUS_SUSPEND_LETTER ? 'Suspended' : 'Active'
           }?`}
           variant="error"
           accentColor={
-            action.newStatus === STATUS_ACTIVE_LETTER
+            pendingAction.newStatus === STATUS_ACTIVE_LETTER
               ? DarkTheme.positive
               : DarkTheme.negative
           }
@@ -506,25 +489,25 @@ export default function TradingEventsScreen() {
             {
               label: 'Confirm',
               style:
-                action.newStatus === STATUS_ACTIVE_LETTER
+                pendingAction.newStatus === STATUS_ACTIVE_LETTER
                   ? 'success'
                   : 'destructive',
               onPress: () => {
-                const ev = action.event;
-                const ns = action.newStatus;
-                setAction({ kind: 'none' });
+                const ev = pendingAction.event;
+                const ns = pendingAction.newStatus;
+                setPendingAction(null);
                 const ok = sendTradingEventStatus(Number(ev.id), ns);
                 if (!ok) console.warn('[trading_events] not connected');
               },
             },
           ]}
-          onClose={() => setAction({ kind: 'none' })}
+          onClose={() => setPendingAction(null)}
         />
       )}
 
       {/* ---------------- Move form ---------------- */}
-      {action.kind === 'moveForm' && (
-        <Modal transparent animationType="fade" visible onRequestClose={() => setAction({ kind: 'none' })}>
+      {pendingAction?.kind === 'moveForm' && (
+        <Modal transparent animationType="fade" visible onRequestClose={() => setPendingAction(null)}>
           <View style={styles.modalBackdrop}>
             <View style={[styles.modalCard, { backgroundColor: DarkTheme.surface }]}>
               <Text style={[styles.modalTitle, { color: DarkTheme.text }]}>
@@ -578,7 +561,7 @@ export default function TradingEventsScreen() {
               <View style={styles.modalButtons}>
                 <TouchableOpacity
                   style={[styles.modalBtn, { backgroundColor: DarkTheme.surfaceAlt }]}
-                  onPress={() => setAction({ kind: 'none' })}
+                  onPress={() => setPendingAction(null)}
                 >
                   <Text style={{ color: DarkTheme.text, fontWeight: 'bold' }}>Cancel</Text>
                 </TouchableOpacity>
@@ -595,13 +578,13 @@ export default function TradingEventsScreen() {
       )}
 
       {/* ---------------- Confirm Move ---------------- */}
-      {action.kind === 'confirmMove' && (
+      {pendingAction?.kind === 'confirmMove' && (
         <ConfirmDialog
           visible={true}
           title="Confirm Move"
           message={
-            `Move ${action.moveType === MOVE_TYPE_ACTIVE ? 'active' : 'suspended'} events ` +
-            `by ${action.hours}h ${action.minutes}m?\n\nThis affects all matching events.`
+            `Move ${pendingAction.moveType === MOVE_TYPE_ACTIVE ? 'active' : 'suspended'} events ` +
+            `by ${pendingAction.hours}h ${pendingAction.minutes}m?\n\nThis affects all matching events.`
           }
           variant="error"
           accentColor={DarkTheme.negative}
@@ -611,45 +594,17 @@ export default function TradingEventsScreen() {
               label: 'Confirm',
               style: 'destructive',
               onPress: () => {
-                const { hours, minutes, moveType } = action;
-                setAction({ kind: 'none' });
+                const { hours, minutes, moveType } = pendingAction;
+                setPendingAction(null);
                 const ok = sendTradingEventsMoveAll(hours, minutes, moveType);
                 if (!ok) console.warn('[trading_events] not connected');
               },
             },
           ]}
-          onClose={() => setAction({ kind: 'none' })}
+          onClose={() => setPendingAction(null)}
         />
       )}
     </View>
-  );
-}
-
-// ---------- menu item component ----------
-function MenuItem({
-  label, onPress, disabled = false, color,
-}: {
-  label: string;
-  onPress: () => void;
-  disabled?: boolean;
-  color: string;
-}) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={disabled}
-      style={[
-        styles.menuItem,
-        {
-          backgroundColor: DarkTheme.surfaceAlt,
-          opacity: disabled ? 0.4 : 1,
-        },
-      ]}
-    >
-      <Text style={{ color: disabled ? DarkTheme.textMuted : color, fontWeight: '600' }}>
-        {label}{disabled ? ' (locked)' : ''}
-      </Text>
-    </TouchableOpacity>
   );
 }
 
@@ -742,16 +697,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 6,
-  },
-
-  menuItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 6,
-    marginBottom: 6,
-  },
-  divider: {
-    height: 1,
-    marginVertical: 6,
   },
 });

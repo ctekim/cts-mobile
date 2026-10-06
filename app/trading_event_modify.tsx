@@ -14,7 +14,6 @@ import { sendTradingEventModify } from '../src/services/event_messages';
 const EMPTY_ARRAY: any[] = [];
 const NONE = 'None';
 
-// ----- helpers to normalize what we receive -----
 function normalizeDate(v: any): string {
   if (!v) return '';
   const s = String(v).padStart(8, '0');
@@ -67,7 +66,6 @@ export default function TradingEventModifyScreen() {
     [events, idNum]
   );
 
-  // form state
   const [tradingRules, setTradingRules] = useState('');
   const [description, setDescription] = useState('');
   const [exchange, setExchange] = useState(NONE);
@@ -78,6 +76,13 @@ export default function TradingEventModifyScreen() {
   const [priority, setPriority] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
+
+  const goBack = () => {
+    const canGo = router.canGoBack();
+   //  console.log('[trading_event_modify] goBack, canGoBack:', canGo);
+    if (canGo) router.back();
+    else router.replace('/trading_events');
+  };
 
   useEffect(() => {
     if (!connected) router.replace('/');
@@ -129,12 +134,19 @@ export default function TradingEventModifyScreen() {
     });
     if (!ok) console.warn('[trading_event_modify] not connected');
     setConfirm(false);
-    router.back();
+    goBack();
   };
 
   if (!event) {
     return (
       <View style={[styles.container, { backgroundColor: DarkTheme.background }]}>
+        <View style={styles.toolbar}>
+          <TouchableOpacity onPress={goBack} style={styles.backBtn} hitSlop={8}>
+            <Text style={[styles.backText, { color: DarkTheme.codeText }]}>‹ Back</Text>
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: DarkTheme.text }]}>Modify Event</Text>
+          <View style={{ width: 60 }} />
+        </View>
         <Text style={{ color: DarkTheme.text, padding: 20 }}>Event not found</Text>
       </View>
     );
@@ -142,14 +154,14 @@ export default function TradingEventModifyScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: DarkTheme.background }}
+      style={{ flex: 1, backgroundColor: DarkTheme.background, paddingTop: 40 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.toolbar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={goBack} style={styles.backBtn} hitSlop={8}>
           <Text style={[styles.backText, { color: DarkTheme.codeText }]}>‹ Back</Text>
         </TouchableOpacity>
-        <Text style={[styles.title, { color: DarkTheme.text }]}>
+        <Text style={[styles.title, { color: DarkTheme.text }]} numberOfLines={1}>
           Modify Event #{event.id}
         </Text>
         <View style={{ width: 60 }} />
@@ -163,11 +175,11 @@ export default function TradingEventModifyScreen() {
         <Field label="Date (YYYY-MM-DD)" value={date} onChange={setDate} placeholder="optional" />
         <Field label="Time (HH:MM:SS)" value={time} onChange={setTime} placeholder="optional" />
 
-        <Dropdown label="Exchange" value={exchange} onChange={setExchange}
+        <CodeDropdown label="Exchange" value={exchange} onChange={setExchange}
           options={[NONE, ...exchanges.map((x: any) => String(x.code)).filter(Boolean)]} />
-        <Dropdown label="Market" value={market} onChange={setMarket}
+        <CodeDropdown label="Market" value={market} onChange={setMarket}
           options={[NONE, ...markets.map((x: any) => String(x.code)).filter(Boolean)]} />
-        <Dropdown label="Instrument" value={instrument} onChange={setInstrument}
+        <CodeDropdown label="Instrument" value={instrument} onChange={setInstrument}
           options={[NONE, ...instruments.map((x: any) => String(x.code)).filter(Boolean)]} />
 
         {error && <Text style={{ color: DarkTheme.negative, marginTop: 8 }}>{error}</Text>}
@@ -198,7 +210,7 @@ export default function TradingEventModifyScreen() {
   );
 }
 
-// ---------- small field/dropdown components ----------
+// ---------- small components ----------
 function Field({
   label, value, onChange, editable = true, keyboardType, placeholder,
 }: {
@@ -229,7 +241,7 @@ function Field({
   );
 }
 
-function Dropdown({
+function CodeDropdown({
   label, value, onChange, options,
 }: {
   label: string; value: string;
@@ -239,11 +251,8 @@ function Dropdown({
   return (
     <View style={{ marginBottom: 12 }}>
       <Text style={[styles.label, { color: DarkTheme.textMuted }]}>{label}</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 6, paddingVertical: 4 }}
-      >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 6, paddingVertical: 4 }}>
         {options.map((opt) => {
           const selected = opt === value;
           return (
@@ -279,7 +288,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   title: { fontSize: 18, fontWeight: 'bold' },
-  backBtn: { paddingVertical: 6, paddingHorizontal: 4, width: 60 },
+  backBtn: { paddingVertical: 6, paddingHorizontal: 4, width: 60, justifyContent: 'center' },
   backText: { fontSize: 16, fontWeight: 'bold' },
   label: { fontSize: 12, marginBottom: 4 },
   input: {

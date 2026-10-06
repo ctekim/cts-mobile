@@ -14,10 +14,8 @@ import { sendTradingEventCreate } from '../src/services/event_messages';
 const EMPTY_ARRAY: any[] = [];
 const NONE = 'None';
 
-const STATUS_OPTIONS = [
-  { id: 'A', name: 'Active' },
-  { id: 'S', name: 'Suspend' },
-];
+// Status is fixed on create — matches web form default
+const CREATE_DEFAULT_STATUS = 'S';
 
 const RUN_OPTIONS = [
   { id: 'Y', name: 'Yes' },
@@ -59,18 +57,21 @@ export default function TradingEventCreateScreen() {
   const [exchange, setExchange] = useState(NONE);
   const [market, setMarket] = useState(NONE);
   const [instrument, setInstrument] = useState(NONE);
-  const [status, setStatus] = useState('A');
   const [runImmediately, setRunImmediately] = useState<'Y' | 'N'>('N');
 
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
+
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/trading_events');
+  };
 
   useEffect(() => {
     if (!connected) router.replace('/');
     else if (!isMarketController) router.replace('/(tabs)/more');
   }, [connected, isMarketController, router]);
 
-  // When Run Immediately = Yes → clear and disable date/time
   const onRunImmediatelyChange = (v: 'Y' | 'N') => {
     setRunImmediately(v);
     if (v === 'Y') {
@@ -105,7 +106,7 @@ export default function TradingEventCreateScreen() {
       tradingRules: tradingRules.trim(),
       description: description.trim(),
       priority: Number(priority),
-      status,
+      status: CREATE_DEFAULT_STATUS,
       runImmediately,
       date: runImmediately === 'N' && date ? dateToYyyymmdd(date) : undefined,
       time: runImmediately === 'N' && time ? timeToHhmmss(time) : undefined,
@@ -115,7 +116,7 @@ export default function TradingEventCreateScreen() {
     });
     if (!ok) console.warn('[trading_event_create] not connected');
     setConfirm(false);
-    router.back();
+    goBack();
   };
 
   const dateTimeDisabled = runImmediately === 'Y';
@@ -126,7 +127,7 @@ export default function TradingEventCreateScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.toolbar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={goBack} style={styles.backBtn}>
           <Text style={[styles.backText, { color: DarkTheme.codeText }]}>‹ Back</Text>
         </TouchableOpacity>
         <Text style={[styles.title, { color: DarkTheme.text }]}>Create Trading Event</Text>
@@ -139,12 +140,12 @@ export default function TradingEventCreateScreen() {
         <Field label="Description" value={description} onChange={setDescription} />
         <Field label="Priority" value={priority} onChange={setPriority} keyboardType="number-pad" />
 
-        <Dropdown label="Status" value={status} onChange={setStatus}
-          options={STATUS_OPTIONS} />
-
-        <Dropdown label="Run Immediately" value={runImmediately}
+        <NamedDropdown
+          label="Run Immediately"
+          value={runImmediately}
           onChange={(v) => onRunImmediatelyChange(v as 'Y' | 'N')}
-          options={RUN_OPTIONS} />
+          options={RUN_OPTIONS}
+        />
 
         <Field
           label="Date (YYYY-MM-DD)"
@@ -227,7 +228,7 @@ function Field({
   );
 }
 
-function Dropdown({
+function NamedDropdown({
   label, value, onChange, options,
 }: {
   label: string; value: string;
