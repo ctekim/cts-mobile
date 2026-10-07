@@ -54,11 +54,11 @@ export default function ExchangesScreen() {
     else if (!isMarketController) router.replace('/(tabs)/more');
   }, [connected, isMarketController, router]);
 
-  useEffect(() => {
-    if (exchanges.length > 0) {
-      console.log('[exchanges] first row:', JSON.stringify(exchanges[0], null, 2));
-    }
-  }, [exchanges.length]);
+  // useEffect(() => {
+  //   if (exchanges.length > 0) {
+  //     console.log('[exchanges] first row:', JSON.stringify(exchanges[0], null, 2));
+  //   }
+  // }, [exchanges.length]);
 
   const onLogout = () => {
     handleLogout();

@@ -28,4 +28,8 @@ export function handleLogout() {
   closeSocket();
   store.dispatch(resetGlobals());
   store.dispatch({ type: 'tables/resetTables' });
+
+  // NOTE: biometric credentials are intentionally NOT cleared here.
+  // "Logout" ends the session; it does not forget this device.
+  // To disable biometrics, use Settings → Biometric Login → off.
 }
