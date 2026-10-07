@@ -1,15 +1,21 @@
 // app/(tabs)/holdings.tsx
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
   StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppSelector } from '../../src/redux/hooks';
-import { selectTSConnected, selectTableData, selectHoldingsRequest } from '../../src/redux/globalsSlice';
+import {
+  selectTSConnected,
+  selectTableData,
+  selectHoldingsRequest,
+  selectIsMarketController,
+} from '../../src/redux/globalsSlice';
 import { handleLogout } from '../../src/services/logout';
 import { formatQty, formatStatus } from '../../src/common/format';
 import { DarkTheme } from '../../src/common/theme';
+import { ConfirmDialog } from '../../src/components/ConfirmDialog';
 
 const CODE_WIDTH = 140;
 const ROW_HEIGHT = 36;
@@ -26,24 +32,32 @@ interface ColumnDef {
 }
 
 const COLUMNS: ColumnDef[] = [
-  { key: 'tot',    label: 'Total',      width: 140, format: 'qty' },
-  { key: 'avail',  label: 'Available',  width: 140, format: 'qty' },
+  { key: 'tot',    label: 'Total',         width: 140, format: 'qty' },
+  { key: 'avail',  label: 'Available',     width: 140, format: 'qty' },
   { key: 'b_pend', label: 'Buy Pending',   width: 140, format: 'qty' },
   { key: 's_pend', label: 'Sell Pending',  width: 140, format: 'qty' },
-  { key: 'instr',  label: 'Instrument', width: 100, format: 'text' },
-  { key: 'trdacc', label: 'Account',    width: 110, format: 'text' },
+  { key: 'instr',  label: 'Instrument',    width: 100, format: 'text' },
+  { key: 'trdacc', label: 'Account',       width: 110, format: 'text' },
 ];
 
 const TOTAL_DATA_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
 
+type MenuAction =
+  | { kind: 'menu'; holding: any }
+  | null;
+
 export default function HoldingsScreen() {
   const router = useRouter();
   const connected = useAppSelector(selectTSConnected);
+  const isMarketController = useAppSelector(selectIsMarketController);
   const holdings = useAppSelector(
     (s: any) => s.tables.tables.HoldingsTable ?? EMPTY_ARRAY
   );
   const instruments = useAppSelector(selectTableData);
   const holdingsRequest = useAppSelector(selectHoldingsRequest);
+
+  const [menuAction, setMenuAction] = useState<MenuAction>(null);
+
   const leftListRef = useRef<FlatList<any>>(null);
   const headerScrollRef = useRef<ScrollView>(null);
 
@@ -70,26 +84,21 @@ export default function HoldingsScreen() {
     });
   };
 
-  // Decimals: qty_dec lives on the instrument, not on the holding row
   const getQtyDec = (item: any): number => {
     const inst = instruments[item.instr];
     return inst?.qty_dec ?? 0;
   };
 
-  // ----- Cell text -----
   const cellText = (item: any, col: ColumnDef): string => {
     const raw = item[col.key];
     if (raw === null || raw === undefined) return '';
-
     switch (col.format) {
       case 'qty':    return formatQty(raw, getQtyDec(item));
       case 'status': return formatStatus(raw);
-      case 'text':
       default:       return String(raw);
     }
   };
 
-  // ----- Cell color -----
   const cellColor = (item: any, col: ColumnDef): string => {
     if (col.key === 'status') {
       const s = String(item.status ?? '').toUpperCase();
@@ -102,7 +111,11 @@ export default function HoldingsScreen() {
     return DarkTheme.text;
   };
 
-  // ----- Renderers -----
+  const openMenu = (item: any) => {
+    if (!isMarketController) return;
+    setMenuAction({ kind: 'menu', holding: item });
+  };
+
   const renderCodeCell = ({ item, index }: { item: any; index: number }) => (
     <Pressable
       style={({ pressed }) => [
@@ -115,6 +128,7 @@ export default function HoldingsScreen() {
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
       onPress={() => console.log('[holdings] tapped:', item.code)}
+      onLongPress={() => openMenu(item)}
     >
       <Text style={[styles.codeText, { color: DarkTheme.codeText }]} numberOfLines={1}>
         {item.code ?? ''}
@@ -132,6 +146,7 @@ export default function HoldingsScreen() {
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
       onPress={() => console.log('[holdings] tapped:', item.code)}
+      onLongPress={() => openMenu(item)}
     >
       {COLUMNS.map((col) => (
         <Text
@@ -186,9 +201,7 @@ export default function HoldingsScreen() {
             { borderRightColor: DarkTheme.codeColumnBorder },
           ]}
         >
-          <Text style={[styles.headerText, { color: DarkTheme.headerText }]}>
-            Code
-          </Text>
+          <Text style={[styles.headerText, { color: DarkTheme.headerText }]}>Code</Text>
         </View>
 
         <ScrollView
@@ -274,6 +287,84 @@ export default function HoldingsScreen() {
           />
         </ScrollView>
       </View>
+
+      {/* ---------------- Row action menu ---------------- */}
+      {menuAction?.kind === 'menu' && (
+        <ConfirmDialog
+          visible={true}
+          title={`Holding: ${menuAction.holding.code} / ${menuAction.holding.trdacc ?? ''}`}
+          message="Choose an action"
+          variant="default"
+          actions={[
+            {
+              label: 'Back',
+              style: 'cancel',
+              onPress: () => setMenuAction(null),
+            },
+            {
+              label: 'Create Holdings',
+              style: 'success',
+              onPress: () => {
+                const h = menuAction.holding;
+                setMenuAction(null);
+                router.push({
+                  pathname: '/holding_create',
+                  params: {
+                    trdacc: String(h.trdacc ?? ''),
+                    instr: String(h.instr ?? h.code ?? ''),
+                  },
+                });
+              },
+            },
+            {
+              label: 'Clear Buy Trade',
+              style: 'destructive',
+              onPress: () => {
+                const h = menuAction.holding;
+                setMenuAction(null);
+                router.push({
+                  pathname: '/holding_clear_buy',
+                  params: {
+                    trdacc: String(h.trdacc ?? ''),
+                    instr: String(h.instr ?? h.code ?? ''),
+                  },
+                });
+              },
+            },
+            {
+              label: 'Clear Sell Trade',
+              style: 'destructive',
+              onPress: () => {
+                const h = menuAction.holding;
+                setMenuAction(null);
+                router.push({
+                  pathname: '/holding_clear_sell',
+                  params: {
+                    trdacc: String(h.trdacc ?? ''),
+                    instr: String(h.instr ?? h.code ?? ''),
+                  },
+                });
+              },
+            },
+            {
+              label: 'Adjust Balances',
+              style: 'success',
+              onPress: () => {
+                const h = menuAction.holding;
+                setMenuAction(null);
+                router.push({
+                  pathname: '/holding_adjust',
+                  params: {
+                    trdacc: String(h.trdacc ?? ''),
+                    instr: String(h.instr ?? h.code ?? ''),
+                  },
+                });
+              },
+            },
+          ]}
+          onClose={() => setMenuAction(null)}
+        />
+      )}
     </View>
   );
 }
@@ -328,17 +419,8 @@ const styles = StyleSheet.create({
   empty: { textAlign: 'center', marginTop: 40 },
 
   navBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
-  
   navBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
-  
-  emptyTapArea: {
-    paddingVertical: 40,
-    alignItems: 'center',
-  },
-  emptyHint: {
-    marginTop: 8,
-    fontSize: 14,
-    textAlign: 'center',
-  },
 
+  emptyTapArea: { paddingVertical: 40, alignItems: 'center' },
+  emptyHint: { marginTop: 8, fontSize: 14, textAlign: 'center' },
 });
