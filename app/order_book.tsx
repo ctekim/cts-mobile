@@ -19,14 +19,13 @@ type ViewMode = 'grouped' | 'orders';
 
 // Columns used by each view
 const GROUPED_COLUMNS = [
-  { key: 'price', label: 'Price', width: 80 },
-  { key: 'qty',   label: 'Qty',   width: 65 },
+  { key: 'price', label: 'Price', width: 100 },
+  { key: 'qty',   label: 'Qty',   width: 100 },
 ];
 
 const ORDER_COLUMNS = [
-  { key: 'price',    label: 'Price',    width: 65 },
-  { key: 'qty',      label: 'Qty',      width: 55 },
-  { key: 'priority', label: 'Prio',     width: 45 },
+  { key: 'price',    label: 'Price',    width: 100 },
+  { key: 'qty',      label: 'Qty',      width: 100 },
 ];
 
 export default function OrderBookScreen() {
