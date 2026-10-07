@@ -1564,23 +1564,23 @@ export const ShowSuccess = (msg: string, _bgColor: string = '#14532d'): void => 
 //    { id: STATUS_DEFUNCT, name: DEFUNCT },
 // ];
 
-// export function ConvertToTradingAccountTypeId(type) {
-//   // console.log('ConvertToTradingAccountTypeId: ', type);
-//   switch (type) {
-//     case GENERAL_NAME:
-//       return GENERAL_ID;
-//     case FOREIGN_NAME:
-//       return FOREIGN_ID;
-//     case HOUSE_NAME:
-//       return HOUSE_ID;
-//     case INSTITUTIONAL_NAME:
-//       return INSTITUTIONAL_ID;
-//     case OMNIBUS_NAME:
-//       return OMNIBUS_ID;
-//     default:
-//       return NAME_UNKNOWN
-//   }
-// }
+export function ConvertToTradingAccountTypeId(type: string) {
+  // console.log('ConvertToTradingAccountTypeId: ', type);
+  switch (type) {
+    case GENERAL_NAME:
+      return GENERAL_ID;
+    case FOREIGN_NAME:
+      return FOREIGN_ID;
+    case HOUSE_NAME:
+      return HOUSE_ID;
+    case INSTITUTIONAL_NAME:
+      return INSTITUTIONAL_ID;
+    case OMNIBUS_NAME:
+      return OMNIBUS_ID;
+    default:
+      return NAME_UNKNOWN
+  }
+}
 
 // export function ConvertToFirmTypeId (type) {
 //   switch (type) {
