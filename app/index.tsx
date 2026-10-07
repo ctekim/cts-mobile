@@ -1,7 +1,8 @@
 // app/index.tsx
 import { useEffect, useRef, useState } from 'react';
 import {
-  Alert, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  ActivityIndicator, Alert, ImageBackground, KeyboardAvoidingView,
+  Platform, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -22,11 +23,15 @@ import { useAppSelector } from '../src/redux/hooks';
 const TRANSACTION_URL = 'ws://192.168.56.100:9401';
 const HEARTBEAT_INTERVAL = 20000;
 
+// Background image you added
+const BG_IMAGE = require('../assets/images/login-bg.jpg');
+
 export default function HomeScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState('Disconnected');
   const [loggedOn, setLoggedOn] = useState(false);
+  const [connecting, setConnecting] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -53,9 +58,10 @@ export default function HomeScreen() {
       return;
     }
 
+    setConnecting(true);
     store.dispatch(setTSUserId(username));
     store.dispatch(setBSId(bsidRef.current));
-    setStatus('Connecting...');
+    setStatus('Connecting…');
 
     const ws = new WebSocket(TRANSACTION_URL);
     wsRef.current = ws;
@@ -65,6 +71,7 @@ export default function HomeScreen() {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       if (ws.readyState === WebSocket.OPEN) ws.close();
       setStatus('Logged out by server');
+      setConnecting(false);
     });
 
     heartbeatRef.current = setInterval(() => {
@@ -81,7 +88,7 @@ export default function HomeScreen() {
     setHeartbeat(heartbeatRef.current);
 
     ws.onopen = () => {
-      setStatus('Connected - sending logon');
+      setStatus('Authenticating…');
       ws.send(JSON.stringify({
         [JSON_KEY_MESSAGE_TYPE]: MSGTYPE_TS_LOGON,
         [JSON_KEY_USER]: username,
@@ -90,7 +97,6 @@ export default function HomeScreen() {
         [JSON_KEY_IN_SEQ]: 0,
         [JSON_KEY_BROWSER_SESSION_ID]: bsidRef.current,
       }));
-      setStatus('Logon sent');
     };
 
     ws.onmessage = (event) => {
@@ -109,62 +115,198 @@ export default function HomeScreen() {
       }
     };
 
-    ws.onerror = (e) => {
-      console.error('[CTS] WS error', e);
+    ws.onerror = () => {
       setStatus('Connection error');
+      setConnecting(false);
     };
 
     ws.onclose = (e: CloseEvent) => {
       console.log('[WS CLOSED]', e.code, e.reason, 'wasClean:', e.wasClean);
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       setStatus('Disconnected');
+      setConnecting(false);
       setLoggedOn(false);
     };
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>CTS Mobile</Text>
-      <Text style={styles.subtitle}>Sign in to continue</Text>
-      <View style={styles.form}>
-        <TextInput
-          style={styles.input}
-          placeholder="Username"
-          autoCapitalize="none"
-          value={username}
-          onChangeText={setUsername}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Login</Text>
-        </TouchableOpacity>
-        <Text style={styles.status}>Status: {status}</Text>
-        {loggedOn && <Text style={styles.status}>Logged on ✅</Text>}
-      </View>
+    <ImageBackground
+      source={BG_IMAGE}
+      style={styles.bg}
+      resizeMode="cover"
+    >
+      {/* Dark overlay so text stays readable */}
+      <View style={styles.overlay} />
+
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.container}>
+          <View style={styles.brand}>
+            <Text style={styles.brandTitle}>CTS</Text>
+            <Text style={styles.brandSub}>Mobile Trading Terminal</Text>
+          </View>
+
+          <View style={styles.card}>
+                        
+            <Text style={styles.label}>Username</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. jsmith"
+              placeholderTextColor="#6b7a90"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={username}
+              onChangeText={setUsername}
+              editable={!connecting}
+            />
+
+            <Text style={[styles.label, { marginTop: 12 }]}>Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="••••••••"
+              placeholderTextColor="#6b7a90"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+              editable={!connecting}
+            />
+
+            <TouchableOpacity
+              style={[styles.button, connecting && styles.buttonDisabled]}
+              onPress={handleLogin}
+              disabled={connecting}
+              activeOpacity={0.85}
+            >
+              {connecting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Sign In</Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.statusRow}>
+              <View
+                style={[
+                  styles.dot,
+                  {
+                    backgroundColor:
+                      status === 'Disconnected' ? '#7a8598'
+                      : status.startsWith('Connection') || status.startsWith('Logged out') ? '#e06060'
+                      : '#4ec98a',
+                  },
+                ]}
+              />
+              <Text style={styles.statusText}>{status}</Text>
+            </View>
+
+            {loggedOn && (
+              <Text style={[styles.statusText, { marginTop: 6, color: '#4ec98a' }]}>
+                Logged on ✓
+              </Text>
+            )}
+          </View>
+
+          <Text style={styles.footer}>© {new Date().getFullYear()} CTS</Text>
+        </View>
+      </KeyboardAvoidingView>
+
       {__DEV__ && <DebugPanel />}
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24 },
-  title: { fontSize: 32, fontWeight: 'bold', textAlign: 'center' },
-  subtitle: { marginTop: 8, fontSize: 16, textAlign: 'center' },
-  form: { marginTop: 40 },
+  bg: { flex: 1, backgroundColor: '#040a14' },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(4,10,20,0.78)',
+  },
+  flex: { flex: 1 },
+  container: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+    justifyContent: 'center',
+  },
+
+  brand: { alignItems: 'center', marginBottom: 32 },
+  brandTitle: {
+    fontSize: 42,
+    fontWeight: '800',
+    color: '#e8eef7',
+    letterSpacing: 4,
+  },
+  brandSub: {
+    marginTop: 6,
+    fontSize: 13,
+    color: '#ffffff',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+
+  card: {
+    backgroundColor: 'rgba(12, 20, 32, 0.85)',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    shadowColor: '#000',
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8,
+  },
+  cardTitle: { fontSize: 22, fontWeight: '700', color: '#e8eef7' },
+  cardSub: { fontSize: 13, color: '#7a8598', marginTop: 4, marginBottom: 20 },
+
+  label: {
+    fontSize: 12,
+    color: '#ffffff',
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
   input: {
-    height: 50, borderWidth: 1, borderColor: '#999', borderRadius: 6,
-    paddingHorizontal: 14, marginBottom: 16, fontSize: 16,
+    height: 48,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: '#e8eef7',
   },
+
   button: {
-    height: 50, borderRadius: 6, alignItems: 'center',
-    justifyContent: 'center', backgroundColor: '#222',
+    marginTop: 20,
+    height: 50,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2f7dd1',
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  status: { marginTop: 20, textAlign: 'center', fontSize: 14 },
+  buttonDisabled: { opacity: 0.7 },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.4 },
+
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 18,
+    gap: 8,
+  },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  statusText: { fontSize: 13, color: '#8b98ad' },
+
+  footer: {
+    marginTop: 32,
+    textAlign: 'center',
+    fontSize: 11,
+    color: '#4b5568',
+    letterSpacing: 0.6,
+  },
 });
