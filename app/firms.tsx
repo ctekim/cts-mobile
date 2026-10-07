@@ -1,16 +1,23 @@
 // app/firms.tsx
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
   StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppSelector } from '../src/redux/hooks';
-import { selectTSConnected, selectIsMarketController } from '../src/redux/globalsSlice';
+import {
+  selectTSConnected, selectIsMarketController, selectTSUserId,
+} from '../src/redux/globalsSlice';
 import { handleLogout } from '../src/services/logout';
 import { formatStatus } from '../src/common/format';
 import { DarkTheme } from '../src/common/theme';
 import { convertFirmType } from '../src/common/user_constants';
+import { ConfirmDialog } from '../src/components/ConfirmDialog';
+import {
+  sendFirmChangeStatus,
+  sendFirmCancelAllOrders,
+} from '../src/services/firm_messages';
 
 const CODE_WIDTH = 100;
 const ROW_HEIGHT = 36;
@@ -33,13 +40,25 @@ const COLUMNS: ColumnDef[] = [
 const TOTAL_DATA_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
 const EMPTY_ARRAY: any[] = [];
 
+const STATUS_ACTIVE_LETTER = 'A';
+const STATUS_SUSPEND_LETTER = 'S';
+
+type PendingAction =
+  | { kind: 'confirmStatus'; firm: any; newStatus: 'A' | 'S' }
+  | { kind: 'confirmCancelAll'; firm: any }
+  | null;
+
 export default function FirmsScreen() {
   const router = useRouter();
   const connected = useAppSelector(selectTSConnected);
   const isMarketController = useAppSelector(selectIsMarketController);
+  const submitter = useAppSelector(selectTSUserId);
   const firms = useAppSelector(
     (s: any) => s.tables.tables.ParticipantsTable ?? EMPTY_ARRAY
   );
+
+  const [menuTarget, setMenuTarget] = useState<any | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 
   const leftListRef = useRef<FlatList<any>>(null);
   const headerScrollRef = useRef<ScrollView>(null);
@@ -75,7 +94,6 @@ export default function FirmsScreen() {
     switch (col.format) {
       case 'status':   return formatStatus(raw);
       case 'firmtype': return convertFirmType(raw);
-      case 'text':
       default:         return String(raw);
     }
   };
@@ -92,6 +110,11 @@ export default function FirmsScreen() {
     return DarkTheme.text;
   };
 
+  const openMenu = (item: any) => {
+    if (!isMarketController) return;
+    setMenuTarget(item);
+  };
+
   const renderCodeCell = ({ item, index }: { item: any; index: number }) => (
     <Pressable
       style={({ pressed }) => [
@@ -104,6 +127,7 @@ export default function FirmsScreen() {
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
       onPress={() => console.log('[firms] tapped:', item.code)}
+      onLongPress={() => openMenu(item)}
     >
       <Text style={[styles.codeText, { color: DarkTheme.codeText }]} numberOfLines={1}>
         {item.code ?? ''}
@@ -119,6 +143,7 @@ export default function FirmsScreen() {
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
       onPress={() => console.log('[firms] tapped:', item.code)}
+      onLongPress={() => openMenu(item)}
     >
       {COLUMNS.map((col) => (
         <Text
@@ -140,10 +165,15 @@ export default function FirmsScreen() {
     </Pressable>
   );
 
+  // derived menu state
+  const menuStatus = menuTarget ? String(menuTarget.status ?? '').toUpperCase() : '';
+  const menuIsActive = menuStatus === STATUS_ACTIVE_LETTER;
+  const menuStatusLabel = menuIsActive ? 'Suspend' : 'Activate';
+
   return (
     <View style={[styles.container, { backgroundColor: DarkTheme.background }]}>
       <View style={styles.toolbar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
           <Text style={[styles.backText, { color: DarkTheme.codeText }]}>‹ Back</Text>
         </TouchableOpacity>
         <Text style={[styles.toolbarTitle, { color: DarkTheme.text }]}>
@@ -237,6 +267,121 @@ export default function FirmsScreen() {
           />
         </ScrollView>
       </View>
+
+      {/* ---------------- Row action menu ---------------- */}
+      {menuTarget && (
+        <ConfirmDialog
+          visible={true}
+          title={`Firm: ${menuTarget.code}`}
+          message="Choose an action"
+          variant="default"
+          actions={[
+            {
+              label: 'Back',
+              style: 'cancel',
+              onPress: () => setMenuTarget(null),
+            },
+            {
+              label: menuStatusLabel,
+              style: menuIsActive ? 'destructive' : 'success',
+              onPress: () => {
+                const f = menuTarget;
+                const newStatus: 'A' | 'S' = menuIsActive ? 'S' : 'A';
+                setMenuTarget(null);
+                setPendingAction({ kind: 'confirmStatus', firm: f, newStatus });
+              },
+            },
+            {
+              label: 'Cancel All Orders',
+              style: 'destructive',
+              onPress: () => {
+                const f = menuTarget;
+                setMenuTarget(null);
+                setPendingAction({ kind: 'confirmCancelAll', firm: f });
+              },
+            },
+            {
+              label: 'Modify',
+              style: 'success',
+              onPress: () => {
+                const code = menuTarget.code;
+                setMenuTarget(null);
+                router.push({ pathname: '/firm_modify', params: { code: String(code) } });
+              },
+            },
+            {
+              label: 'Create New',
+              style: 'success',
+              onPress: () => {
+                setMenuTarget(null);
+                router.push('/firm_create');
+              },
+            },
+          ]}
+          onClose={() => setMenuTarget(null)}
+        />
+      )}
+
+      {/* ---------------- Confirm Status ---------------- */}
+      {pendingAction?.kind === 'confirmStatus' && (
+        <ConfirmDialog
+          visible={true}
+          title="Confirm Status Change"
+          message={`Set firm ${pendingAction.firm.code} to ${
+            pendingAction.newStatus === STATUS_SUSPEND_LETTER ? 'Suspended' : 'Active'
+          }?`}
+          variant="error"
+          accentColor={
+            pendingAction.newStatus === STATUS_ACTIVE_LETTER
+              ? DarkTheme.positive
+              : DarkTheme.negative
+          }
+          actions={[
+            { label: 'No', style: 'cancel', onPress: () => {} },
+            {
+              label: 'Confirm',
+              style:
+                pendingAction.newStatus === STATUS_ACTIVE_LETTER
+                  ? 'success'
+                  : 'destructive',
+              onPress: () => {
+                const f = pendingAction.firm;
+                const ns = pendingAction.newStatus;
+                const withdraw: 'Y' | 'N' = ns === STATUS_SUSPEND_LETTER ? 'Y' : 'N';
+                setPendingAction(null);
+                const ok = sendFirmChangeStatus(f.code, ns, withdraw, submitter);
+                if (!ok) console.warn('[firms] not connected');
+              },
+            },
+          ]}
+          onClose={() => setPendingAction(null)}
+        />
+      )}
+
+      {/* ---------------- Confirm Cancel All Orders ---------------- */}
+      {pendingAction?.kind === 'confirmCancelAll' && (
+        <ConfirmDialog
+          visible={true}
+          title="Cancel All Orders"
+          message={`Cancel all orders for firm ${pendingAction.firm.code}?\n\nThis cannot be undone.`}
+          variant="error"
+          accentColor={DarkTheme.negative}
+          actions={[
+            { label: 'No', style: 'cancel', onPress: () => {} },
+            {
+              label: 'Confirm',
+              style: 'destructive',
+              onPress: () => {
+                const f = pendingAction.firm;
+                setPendingAction(null);
+                const ok = sendFirmCancelAllOrders(f.code, submitter);
+                if (!ok) console.warn('[firms] not connected');
+              },
+            },
+          ]}
+          onClose={() => setPendingAction(null)}
+        />
+      )}
     </View>
   );
 }
@@ -251,7 +396,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   toolbarTitle: { fontSize: 18, fontWeight: 'bold' },
-  backBtn: { paddingVertical: 6, paddingHorizontal: 4, width: 60 },
+  backBtn: { paddingVertical: 6, paddingHorizontal: 4, width: 60, justifyContent: 'center' },
   backText: { fontSize: 16, fontWeight: 'bold' },
   logoutBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 },
   logoutText: { color: '#fff', fontWeight: 'bold' },
