@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, TextInput, ScrollView, TouchableOpacity, Switch,
-  StyleSheet, KeyboardAvoidingView, Platform,
+  StyleSheet, KeyboardAvoidingView, Platform, Modal, FlatList, Pressable,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAppSelector } from '../src/redux/hooks';
@@ -38,7 +38,6 @@ import {
 const EMPTY_ARRAY: any[] = [];
 const NONE = DROPDOWN_LIST_NONE ?? 'None';
 
-// ---- role options (mirrors web roleOptions) ----
 const ROLE_OPTIONS = [
   { id: ROLE_MARKET_CONTROLLER,                 name: NAME_MARKET_CONTROLLER },
   { id: ROLE_MARKET_CONTROLLER_VIEWER,          name: NAME_MARKET_CONTROLLER_VIEWER },
@@ -66,15 +65,25 @@ const ENGINE_ROLE_IDS = new Set([
 
 function convertToRoleId(raw: any): number {
   const s = String(raw ?? '').trim();
-
-  // numeric id (or numeric string)
   if (s !== '' && /^-?\d+$/.test(s)) return Number(s);
-
-  // role name
   const found = ROLE_OPTIONS.find((r) => r.name === s);
   if (found) return Number(found.id);
-
   return Number(ROLE_PUBLIC);
+}
+
+function roleNameFor(roleId: number): string {
+  const found = ROLE_OPTIONS.find((r) => Number(r.id) === Number(roleId));
+  return found ? found.name : String(roleId);
+}
+
+function resolveFirmCode(firms: any[], raw: any, none: string): string {
+  if (raw == null || raw === '' || raw === none) return none;
+  const s = String(raw);
+  const byId = firms.find((f: any) => String(f.id) === s);
+  if (byId?.code) return String(byId.code);
+  const byCode = firms.find((f: any) => String(f.code) === s);
+  if (byCode?.code) return String(byCode.code);
+  return s;
 }
 
 export default function UserModifyScreen() {
@@ -86,8 +95,9 @@ export default function UserModifyScreen() {
   const users: any[] = useAppSelector(
     (s: any) => s.tables.tables.UsersTable ?? EMPTY_ARRAY
   );
+  // ↓ The firms data lives in ParticipantsTable
   const firms: any[] = useAppSelector(
-    (s: any) => s.tables.tables.FirmsTable ?? EMPTY_ARRAY
+    (s: any) => s.tables.tables.ParticipantsTable ?? EMPTY_ARRAY
   );
 
   const userCode = String(params.code ?? '');
@@ -96,7 +106,6 @@ export default function UserModifyScreen() {
     [users, userCode]
   );
 
-  // ---- form state ----
   const [description, setDescription] = useState('');
   const [firm, setFirm] = useState<string>(NONE);
   const [role, setRole] = useState<number>(Number(ROLE_PUBLIC));
@@ -114,6 +123,7 @@ export default function UserModifyScreen() {
 
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
+  const [picker, setPicker] = useState<null | 'firm' | 'role'>(null);
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -125,11 +135,10 @@ export default function UserModifyScreen() {
     else if (!isSuperUser) router.replace('/(tabs)/more');
   }, [connected, isSuperUser, router]);
 
-  // ---- hydrate from rowData ----
   useEffect(() => {
     if (!user) return;
     setDescription(String(user.descr ?? ''));
-    setFirm(user.firm ? String(user.firm) : NONE);
+    setFirm(resolveFirmCode(firms, user.firm, NONE));
     setRole(convertToRoleId(user.role));
 
     setCheckpointer(user.check === NAME_YES ? (YES as 'Y' | 'N') : (NO as 'Y' | 'N'));
@@ -143,7 +152,7 @@ export default function UserModifyScreen() {
 
     setListeningPort(user.port != null && user.port !== '' ? String(user.port) : '');
     setPrometheusPort(user.prom != null && user.prom !== '' ? String(user.prom) : '');
-  }, [user]);
+  }, [user, firms]);
 
   const isServerRole = ENGINE_ROLE_IDS.has(Number(role));
 
@@ -216,6 +225,17 @@ export default function UserModifyScreen() {
     );
   }
 
+  // Firm picker options
+  const firmOptions = [
+    { id: NONE, name: NONE },
+    ...firms
+      .map((f: any) => ({ id: String(f.code ?? ''), name: String(f.code ?? '') }))
+      .filter((o) => o.id),
+  ];
+
+  // Role picker options
+  const roleOptions = ROLE_OPTIONS.map((r) => ({ id: String(r.id), name: r.name }));
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: DarkTheme.background, paddingTop: 40 }}
@@ -232,29 +252,24 @@ export default function UserModifyScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 16 }}>
-        {/* Code (read-only) */}
         <Field label="Code (read-only)" value={String(user.code ?? '')} editable={false} />
 
-        {/* Description */}
         <Field label="Description" value={description} onChange={setDescription} />
 
-        {/* Firm */}
-        <CodeDropdown
+        <SelectField
           label="Firm"
           value={firm}
-          onChange={setFirm}
-          options={[NONE, ...firms.map((f: any) => String(f.code)).filter(Boolean)]}
+          display={firm}
+          onOpen={() => setPicker('firm')}
         />
 
-        {/* Role */}
-        <NamedDropdown
+        <SelectField
           label="Role"
           value={String(role)}
-          onChange={(v) => setRole(Number(v))}
-          options={ROLE_OPTIONS.map((r) => ({ id: String(r.id), name: r.name }))}
+          display={roleNameFor(role)}
+          onOpen={() => setPicker('role')}
         />
 
-        {/* Check Pointer — enabled only for server roles */}
         <YesNoChips
           label="Check Pointer"
           value={checkpointer}
@@ -262,7 +277,6 @@ export default function UserModifyScreen() {
           disabled={!isServerRole}
         />
 
-        {/* Delete Redundant Ords — disabled for server roles */}
         <YesNoChips
           label="Delete Redundant Ords"
           value={deleteRedundantOrders}
@@ -270,7 +284,6 @@ export default function UserModifyScreen() {
           disabled={isServerRole}
         />
 
-        {/* Permissions */}
         <Text style={[styles.sectionLabel, { color: DarkTheme.textMuted }]}>Permissions</Text>
         <PermissionSwitch
           label="Single Order"
@@ -297,7 +310,6 @@ export default function UserModifyScreen() {
           disabled={isServerRole}
         />
 
-        {/* Ports — editable only for server roles */}
         <Field
           label="Listening Port"
           value={listeningPort}
@@ -339,6 +351,26 @@ export default function UserModifyScreen() {
           onClose={() => setConfirm(false)}
         />
       )}
+
+      {/* Firm picker */}
+      <PickerModal
+        visible={picker === 'firm'}
+        title="Select Firm"
+        value={firm}
+        options={firmOptions}
+        onSelect={setFirm}
+        onClose={() => setPicker(null)}
+      />
+
+      {/* Role picker */}
+      <PickerModal
+        visible={picker === 'role'}
+        title="Select Role"
+        value={String(role)}
+        options={roleOptions}
+        onSelect={(id) => setRole(Number(id))}
+        onClose={() => setPicker(null)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -375,77 +407,108 @@ function Field({
   );
 }
 
-function CodeDropdown({
-  label, value, onChange, options,
+function SelectField({
+  label, value, display, onOpen,
 }: {
-  label: string; value: string;
-  onChange: (v: string) => void;
-  options: string[];
+  label: string;
+  value: string;
+  display: string;
+  onOpen: () => void;
 }) {
   return (
     <View style={{ marginBottom: 12 }}>
       <Text style={[styles.label, { color: DarkTheme.textMuted }]}>{label}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 6, paddingVertical: 4 }}>
-        {options.map((opt) => {
-          const selected = opt === value;
-          return (
-            <TouchableOpacity
-              key={opt}
-              onPress={() => onChange(opt)}
-              style={[
-                styles.chip,
-                {
-                  borderColor: selected ? DarkTheme.accent : DarkTheme.cellBorder,
-                  backgroundColor: selected ? DarkTheme.surfacePressed : 'transparent',
-                },
-              ]}
-            >
-              <Text style={{ color: selected ? DarkTheme.accent : DarkTheme.text }}>
-                {opt}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      <TouchableOpacity
+        onPress={onOpen}
+        style={[
+          styles.input,
+          {
+            borderColor: DarkTheme.cellBorder,
+            backgroundColor: DarkTheme.surface,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          },
+        ]}
+      >
+        <Text style={{ color: DarkTheme.text, fontSize: 14 }} numberOfLines={1}>
+          {display}
+        </Text>
+        <Text style={{ color: DarkTheme.textMuted, fontSize: 14 }}>▾</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
-function NamedDropdown({
-  label, value, onChange, options,
+function PickerModal({
+  visible, title, value, options, onSelect, onClose,
 }: {
-  label: string; value: string;
-  onChange: (v: string) => void;
+  visible: boolean;
+  title: string;
+  value: string;
   options: { id: string; name: string }[];
+  onSelect: (id: string) => void;
+  onClose: () => void;
 }) {
   return (
-    <View style={{ marginBottom: 12 }}>
-      <Text style={[styles.label, { color: DarkTheme.textMuted }]}>{label}</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 6, paddingVertical: 4 }}>
-        {options.map((opt) => {
-          const selected = opt.id === value;
-          return (
-            <TouchableOpacity
-              key={opt.id}
-              onPress={() => onChange(opt.id)}
-              style={[
-                styles.chip,
-                {
-                  borderColor: selected ? DarkTheme.accent : DarkTheme.cellBorder,
-                  backgroundColor: selected ? DarkTheme.surfacePressed : 'transparent',
-                },
-              ]}
-            >
-              <Text style={{ color: selected ? DarkTheme.accent : DarkTheme.text }}>
-                {opt.name}
+    <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
+      <Pressable style={styles.pickerBackdrop} onPress={onClose}>
+        <Pressable
+          style={[styles.pickerCard, { backgroundColor: DarkTheme.surface }]}
+          onPress={() => { /* swallow */ }}
+        >
+          <Text style={[styles.modalTitle, { color: DarkTheme.text }]}>{title}</Text>
+
+          <FlatList
+            data={options}
+            keyExtractor={(o) => o.id}
+            style={{ maxHeight: 400 }}
+            renderItem={({ item }) => {
+              const selected = item.id === value;
+              return (
+                <TouchableOpacity
+                  onPress={() => { onSelect(item.id); onClose(); }}
+                  style={[
+                    styles.pickerRow,
+                    {
+                      backgroundColor: selected ? DarkTheme.surfacePressed : 'transparent',
+                      borderBottomColor: DarkTheme.cellBorder,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      color: selected ? DarkTheme.accent : DarkTheme.text,
+                      fontWeight: selected ? 'bold' : 'normal',
+                      fontSize: 14,
+                    }}
+                  >
+                    {item.name}
+                  </Text>
+                  {selected && (
+                    <Text style={{ color: DarkTheme.accent, fontSize: 16 }}>✓</Text>
+                  )}
+                </TouchableOpacity>
+              );
+            }}
+            ListEmptyComponent={
+              <Text style={{ color: DarkTheme.textMuted, padding: 12 }}>
+                No options
               </Text>
+            }
+          />
+
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.modalBtn, { backgroundColor: DarkTheme.surfaceAlt }]}
+              onPress={onClose}
+            >
+              <Text style={{ color: DarkTheme.text, fontWeight: 'bold' }}>Close</Text>
             </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    </View>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -527,7 +590,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 6,
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: 10,
     fontSize: 14,
   },
   chip: {
@@ -541,5 +604,39 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12 },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 12,
+  },
+  modalBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  pickerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  pickerCard: {
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '80%',
+    borderRadius: 10,
+    padding: 16,
+  },
+  pickerRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
 });
