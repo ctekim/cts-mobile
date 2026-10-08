@@ -132,57 +132,70 @@ export default function IndexMembersScreen() {
     setActionTarget(item);
   };
 
-  const renderIdxCell = ({ item, index }: { item: any; index: number }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.idxCell,
-        {
-          backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
-          borderBottomColor: DarkTheme.cellBorder,
-          borderRightColor: DarkTheme.codeColumnBorder,
-        },
-        pressed && { backgroundColor: DarkTheme.surfacePressed },
-      ]}
-      onPress={() => console.log('[index_members] tapped:', item.idx, item.instr)}
-      onLongPress={() => openMenu(item)}
-    >
-      
-    <Text style={[styles.idxText, { color: memberCodeColor(item) }]} numberOfLines={1}>
-      {item.idx ?? ''}
-    </Text>
-    </Pressable>
-  );
+  const isActiveMember = (item: any): boolean => String(item.status ?? '').trim().toUpperCase() === STATUS_ACTIVE;
 
-  const renderDataRow = ({ item, index }: { item: any; index: number }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.dataRow,
-        { backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface },
-        pressed && { backgroundColor: DarkTheme.surfacePressed },
-      ]}
-      onPress={() => console.log('[index_members] tapped:', item.idx, item.instr)}
-      onLongPress={() => openMenu(item)}
-    >
-      {COLUMNS.map((col) => (
-        <Text
-          key={col.key}
-          style={[
-            styles.dataCell,
-            {
-              width: col.width,
-              borderRightColor: DarkTheme.cellBorder,
-              borderBottomColor: DarkTheme.cellBorder,
-              color: cellColor(item, col),
-            },
-            (col.format === 'int' || col.format === 'price' || col.format === 'dec2') && styles.num,
-          ]}
-          numberOfLines={1}
-        >
-          {cellText(item, col)}
+  const renderIdxCell = ({ item, index }: { item: any; index: number }) => {
+    const dim = !isActiveMember(item);
+
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.idxCell,
+          {
+            backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
+            borderBottomColor: DarkTheme.cellBorder,
+            borderRightColor: DarkTheme.codeColumnBorder,
+            opacity: dim ? 0.6 : 1,
+          },
+          pressed && { backgroundColor: DarkTheme.surfacePressed },
+        ]}
+        onPress={() => console.log('[index_members] tapped:', item.idx, item.instr)}
+        onLongPress={() => openMenu(item)}
+      >
+        <Text style={[styles.idxText, { color: memberCodeColor(item) }]} numberOfLines={1}>
+          {item.idx ?? ''}
         </Text>
-      ))}
-    </Pressable>
-  );
+      </Pressable>
+    );
+  };
+
+  const renderDataRow = ({ item, index }: { item: any; index: number }) => {
+    const dim = !isActiveMember(item);
+
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.dataRow,
+          {
+            backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
+            opacity: dim ? 0.6 : 1,
+          },
+          pressed && { backgroundColor: DarkTheme.surfacePressed },
+        ]}
+        onPress={() => console.log('[index_members] tapped:', item.idx, item.instr)}
+        onLongPress={() => openMenu(item)}
+      >
+        {COLUMNS.map((col) => (
+          <Text
+            key={col.key}
+            style={[
+              styles.dataCell,
+              {
+                width: col.width,
+                borderRightColor: DarkTheme.cellBorder,
+                borderBottomColor: DarkTheme.cellBorder,
+                color: cellColor(item, col),
+              },
+              (col.format === 'int' || col.format === 'price' || col.format === 'dec2') && styles.num,
+            ]}
+            numberOfLines={1}
+          >
+            {cellText(item, col)}
+          </Text>
+        ))}
+      </Pressable>
+    );
+  };
 
   const menuStatus = actionTarget ? String(actionTarget.status ?? '').toUpperCase() : '';
   const menuIsActive = menuStatus === STATUS_ACTIVE;
@@ -301,16 +314,15 @@ export default function IndexMembersScreen() {
               style: 'cancel',
               onPress: () => setActionTarget(null),
             },
-            {
-              label: 'Create Member',
-              style: 'success',
+            ...(menuIsDefunct ? [] : [{
+              label: menuStatusLabel,
+              style: (menuIsActive ? 'destructive' : 'success') as 'destructive' | 'success',
               onPress: () => {
-                const idx = actionTarget.idx;
-                const instr = actionTarget.instr;
+                const m = actionTarget;
                 setActionTarget(null);
-                router.push({ pathname: '/index_member_create', params: { idx, instr } });
+                setPendingAction({ kind: 'status', member: m, newStatus: menuStatusTarget });
               },
-            },
+            }]),
             {
               label: 'Modify Member',
               style: 'success',
@@ -321,15 +333,16 @@ export default function IndexMembersScreen() {
                 router.push({ pathname: '/index_member_modify', params: { idx, instr } });
               },
             },
-            ...(menuIsDefunct ? [] : [{
-              label: menuStatusLabel,
-              style: (menuIsActive ? 'destructive' : 'success') as 'destructive' | 'success',
+            {
+              label: 'Create Member',
+              style: 'success',
               onPress: () => {
-                const m = actionTarget;
+                const idx = actionTarget.idx;
+                const instr = actionTarget.instr;
                 setActionTarget(null);
-                setPendingAction({ kind: 'status', member: m, newStatus: menuStatusTarget });
+                router.push({ pathname: '/index_member_create', params: { idx, instr } });
               },
-            }]),
+            },
           ]}
           onClose={() => setActionTarget(null)}
         />

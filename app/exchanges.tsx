@@ -102,61 +102,75 @@ export default function ExchangesScreen() {
     return DarkTheme.text;
   };
 
-  const renderCodeCell = ({ item, index }: { item: any; index: number }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.codeCell,
-        {
-          backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
-          borderBottomColor: DarkTheme.cellBorder,
-          borderRightColor: DarkTheme.codeColumnBorder,
-        },
-        pressed && { backgroundColor: DarkTheme.surfacePressed },
-      ]}
-      onPress={() => console.log('[exchanges] tapped:', item.code)}
-      onLongPress={() => {
-        if (!isMarketController) return;
-        setActionTarget(item);
-      }}
-    >
-      <Text style={[styles.codeText, { color: codeColorForStatus(item.status) }]} numberOfLines={1}>
-        {item.code ?? ''}
-      </Text>
-    </Pressable>
-  );
+  const isActiveExchange = (item: any): boolean => String(item.status ?? '').trim().toUpperCase() === STATUS_ACTIVE;
 
-  const renderDataRow = ({ item, index }: { item: any; index: number }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.dataRow,
-        { backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface },
-        pressed && { backgroundColor: DarkTheme.surfacePressed },
-      ]}
-      onPress={() => console.log('[exchanges] tapped:', item.code)}
-      onLongPress={() => {
-        if (!isMarketController) return;
-        setActionTarget(item);
-      }}
-    >
-      {COLUMNS.map((col) => (
-        <Text
-          key={col.key}
-          style={[
-            styles.dataCell,
-            {
-              width: col.width,
-              borderRightColor: DarkTheme.cellBorder,
-              borderBottomColor: DarkTheme.cellBorder,
-              color: cellColor(item, col),
-            },
-          ]}
-          numberOfLines={1}
-        >
-          {cellText(item, col)}
+  const renderCodeCell = ({ item, index }: { item: any; index: number }) => {
+    const dim = !isActiveExchange(item);
+
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.codeCell,
+          {
+            backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
+            borderBottomColor: DarkTheme.cellBorder,
+            borderRightColor: DarkTheme.codeColumnBorder,
+            opacity: dim ? 0.6 : 1,
+          },
+          pressed && { backgroundColor: DarkTheme.surfacePressed },
+        ]}
+        onPress={() => console.log('[exchanges] tapped:', item.code)}
+        onLongPress={() => {
+          if (!isMarketController) return;
+          setActionTarget(item);
+        }}
+      >
+        <Text style={[styles.codeText, { color: codeColorForStatus(item.status) }]} numberOfLines={1}>
+          {item.code ?? ''}
         </Text>
-      ))}
-    </Pressable>
-  );
+      </Pressable>
+    );
+  };
+
+  const renderDataRow = ({ item, index }: { item: any; index: number }) => {
+    const dim = !isActiveExchange(item);
+
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.dataRow,
+          {
+            backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
+            opacity: dim ? 0.6 : 1,
+          },
+          pressed && { backgroundColor: DarkTheme.surfacePressed },
+        ]}
+        onPress={() => console.log('[exchanges] tapped:', item.code)}
+        onLongPress={() => {
+          if (!isMarketController) return;
+          setActionTarget(item);
+        }}
+      >
+        {COLUMNS.map((col) => (
+          <Text
+            key={col.key}
+            style={[
+              styles.dataCell,
+              {
+                width: col.width,
+                borderRightColor: DarkTheme.cellBorder,
+                borderBottomColor: DarkTheme.cellBorder,
+                color: cellColor(item, col),
+              },
+            ]}
+            numberOfLines={1}
+          >
+            {cellText(item, col)}
+          </Text>
+        ))}
+      </Pressable>
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: DarkTheme.background }]}>
@@ -269,32 +283,6 @@ export default function ExchangesScreen() {
               onPress: () => {},
             },
             {
-              label: 'Cancel All Orders',
-              style: 'destructive',
-              onPress: () => {
-                const code = actionTarget.code;
-                setActionTarget(null);
-                setPendingAction({ kind: 'cancelAll', exchange: code });
-              },
-            },
-            {
-              label: 'Create New',
-              style: 'success',
-              onPress: () => {
-                setActionTarget(null);
-                router.push('/exchange_create');
-              },
-            },
-            {
-              label: 'Modify',
-              style: 'success',
-              onPress: () => {
-                const code = actionTarget.code;
-                setActionTarget(null);
-                router.push({ pathname: '/exchange_modify', params: { code } });
-              },
-            },
-            {
               label:
                 String(actionTarget.status).toUpperCase() === STATUS_ACTIVE
                   ? 'Suspend'
@@ -317,6 +305,32 @@ export default function ExchangesScreen() {
                   newStatus,
                   withdraw,
                 });
+              },
+            },
+            {
+              label: 'Cancel All Orders',
+              style: 'destructive',
+              onPress: () => {
+                const code = actionTarget.code;
+                setActionTarget(null);
+                setPendingAction({ kind: 'cancelAll', exchange: code });
+              },
+            },
+            {
+              label: 'Modify',
+              style: 'success',
+              onPress: () => {
+                const code = actionTarget.code;
+                setActionTarget(null);
+                router.push({ pathname: '/exchange_modify', params: { code } });
+              },
+            },
+            {
+              label: 'Create New',
+              style: 'success',
+              onPress: () => {
+                setActionTarget(null);
+                router.push('/exchange_create');
               },
             },
           ]}

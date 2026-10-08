@@ -173,55 +173,69 @@ export default function UsersScreen() {
     setMenuTarget(item);
   };
 
-  const renderCodeCell = ({ item, index }: { item: any; index: number }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.codeCell,
-        {
-          backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
-          borderBottomColor: DarkTheme.cellBorder,
-          borderRightColor: DarkTheme.codeColumnBorder,
-        },
-        pressed && { backgroundColor: DarkTheme.surfacePressed },
-      ]}
-      onPress={() => console.log('[users] tapped:', item.code)}
-      onLongPress={() => openMenu(item)}
-    >
-      <Text style={[styles.codeText, { color: codeColorForStatus(item.status) }]} numberOfLines={1}>
-        {item.code ?? ''}
-      </Text>
-    </Pressable>
-  );
+  const isActiveUser = (item: any): boolean => String(item.status ?? '').trim().toUpperCase() === STATUS_ACTIVE_LETTER;
 
-  const renderDataRow = ({ item, index }: { item: any; index: number }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.dataRow,
-        { backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface },
-        pressed && { backgroundColor: DarkTheme.surfacePressed },
-      ]}
-      onPress={() => console.log('[users] tapped:', item.code)}
-      onLongPress={() => openMenu(item)}
-    >
-      {COLUMNS.map((col) => (
-        <Text
-          key={col.key}
-          style={[
-            styles.dataCell,
-            {
-              width: col.width,
-              borderRightColor: DarkTheme.cellBorder,
-              borderBottomColor: DarkTheme.cellBorder,
-              color: cellColor(item, col),
-            },
-          ]}
-          numberOfLines={1}
-        >
-          {cellText(item, col)}
+  const renderCodeCell = ({ item, index }: { item: any; index: number }) => {
+    const dim = !isActiveUser(item);
+
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.codeCell,
+          {
+            backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
+            borderBottomColor: DarkTheme.cellBorder,
+            borderRightColor: DarkTheme.codeColumnBorder,
+            opacity: dim ? 0.6 : 1,
+          },
+          pressed && { backgroundColor: DarkTheme.surfacePressed },
+        ]}
+        onPress={() => console.log('[users] tapped:', item.code)}
+        onLongPress={() => openMenu(item)}
+      >
+        <Text style={[styles.codeText, { color: codeColorForStatus(item.status) }]} numberOfLines={1}>
+          {item.code ?? ''}
         </Text>
-      ))}
-    </Pressable>
-  );
+      </Pressable>
+    );
+  };
+
+  const renderDataRow = ({ item, index }: { item: any; index: number }) => {
+    const dim = !isActiveUser(item);
+
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.dataRow,
+          {
+            backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
+            opacity: dim ? 0.6 : 1,
+          },
+          pressed && { backgroundColor: DarkTheme.surfacePressed },
+        ]}
+        onPress={() => console.log('[users] tapped:', item.code)}
+        onLongPress={() => openMenu(item)}
+      >
+        {COLUMNS.map((col) => (
+          <Text
+            key={col.key}
+            style={[
+              styles.dataCell,
+              {
+                width: col.width,
+                borderRightColor: DarkTheme.cellBorder,
+                borderBottomColor: DarkTheme.cellBorder,
+                color: cellColor(item, col),
+              },
+            ]}
+            numberOfLines={1}
+          >
+            {cellText(item, col)}
+          </Text>
+        ))}
+      </Pressable>
+    );
+  };
 
   // ---------- derived menu state ----------
   const menuStatus = menuTarget ? String(menuTarget.status ?? '').toUpperCase() : '';
@@ -392,15 +406,7 @@ export default function UsersScreen() {
                 setPendingAction({ kind: 'confirmStatus', user: u, newStatus });
               },
             },
-            {
-              label: 'Set Password',
-              style: 'success',
-              onPress: () => {
-                const u = menuTarget;
-                setMenuTarget(null);
-                openPasswordForm(u);
-              },
-            },
+
             {
               label: 'Force Logoff',
               style: 'destructive',
@@ -417,6 +423,15 @@ export default function UsersScreen() {
                 const u = menuTarget;
                 setMenuTarget(null);
                 setPendingAction({ kind: 'confirmCancelAll', user: u });
+              },
+            },
+            {
+              label: 'Set Password',
+              style: 'success',
+              onPress: () => {
+                const u = menuTarget;
+                setMenuTarget(null);
+                openPasswordForm(u);
               },
             },
             {
