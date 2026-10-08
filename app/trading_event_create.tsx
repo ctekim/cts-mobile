@@ -84,7 +84,14 @@ export default function TradingEventCreateScreen() {
   const [tradingRules, setTradingRules] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('');
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  });
+
   const [time, setTime] = useState('');
   const [exchange, setExchange] = useState(NONE);
   const [market, setMarket] = useState(NONE);
