@@ -85,3 +85,45 @@ export const LightTheme: AppColors = {
   buy: '#4a90e2',     
   sell: '#ff4c4c',
 };
+
+/**
+ * Return the display color for a code cell given a status letter/name.
+ *
+ * Accepted inputs (case-insensitive):
+ *   'A' / 'Active'      → default code color
+ *   'S' / 'Suspended'   → red
+ *   'N' / 'New'         → grey
+ *   'I' / 'Inactive'    → grey
+ *   'D' / 'Deleted'     → grey
+ *   'H' / 'Halted'      → grey
+ *   'd' / 'Defunct'     → grey
+ *   anything else       → default code color
+ */
+export function codeColorForStatus(status: any): string {
+  const s = String(status ?? '').trim().toUpperCase();
+  switch (s) {
+    case 'S':
+    case 'SUSPENDED':
+    case 'SUSPEND':
+      return DarkTheme.negative;
+
+    // Triggered — grey (fired, immutable)
+    case 'T':
+    case 'TRIGGERED':
+      return DarkTheme.textMuted;
+    
+    case 'N':
+    case 'NEW':
+    case 'I':
+    case 'INACTIVE':
+    case 'D':
+    case 'DELETED':
+    case 'H':
+    case 'HALTED':
+    case 'DEFUNCT':   // 'D' uppercased; 'd' from server is also caught
+      return DarkTheme.textMuted;
+
+    default:
+      return DarkTheme.codeText;
+  }
+}

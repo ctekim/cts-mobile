@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import { useAppSelector } from '../src/redux/hooks';
 import { selectTSConnected, selectIsMarketController } from '../src/redux/globalsSlice';
 import { handleLogout } from '../src/services/logout';
-import { DarkTheme } from '../src/common/theme';
+import { codeColorForStatus, DarkTheme } from '../src/common/theme';
 import { convertEventStatus } from '../src/common/event_constants';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
 import {
@@ -164,14 +164,14 @@ export default function TradingEventsScreen() {
 
   const cellColor = (item: any, col: ColumnDef): string => {
     if (col.key === 'status') {
-      const s = String(item.status ?? '').toUpperCase();
+      const s = String(item.status ?? '').trim().toUpperCase();
       switch (s) {
-        case 'A': return DarkTheme.positive;
-        case 'T': return DarkTheme.accent;
-        case 'S': return DarkTheme.negative;
-        case 'C': return DarkTheme.positive;
+        case 'A': return DarkTheme.positive;   // Active — green
+        case 'T': return DarkTheme.textMuted;  // Triggered — grey
+        case 'S': return DarkTheme.negative;   // Suspended — red
+        case 'C': return DarkTheme.positive;   // Cancelled — green (per your original)
         case 'D':
-        case 'd': return DarkTheme.textMuted;
+        case 'd': return DarkTheme.textMuted;  // Deleted/Defunct — grey
         default:  return DarkTheme.text;
       }
     }
@@ -225,24 +225,30 @@ export default function TradingEventsScreen() {
       onPress={() => console.log('[trading_events] tapped:', item.id)}
       onLongPress={() => openMenu(item)}
     >
-      {COLUMNS.map((col) => (
-        <Text
-          key={col.key}
-          style={[
-            styles.dataCell,
-            {
-              width: col.width,
-              borderRightColor: DarkTheme.cellBorder,
-              borderBottomColor: DarkTheme.cellBorder,
-              color: cellColor(item, col),
-            },
-            col.format === 'int' && styles.num,
-          ]}
-          numberOfLines={1}
-        >
-          {cellText(item, col)}
-        </Text>
-      ))}
+      {COLUMNS.map((col) => {
+        const color = col.key === 'code'
+          ? codeColorForStatus(item.status)
+          : cellColor(item, col);
+
+        return (
+          <Text
+            key={col.key}
+            style={[
+              styles.dataCell,
+              {
+                width: col.width,
+                borderRightColor: DarkTheme.cellBorder,
+                borderBottomColor: DarkTheme.cellBorder,
+                color,
+              },
+              col.format === 'int' && styles.num,
+            ]}
+            numberOfLines={1}
+          >
+            {cellText(item, col)}
+          </Text>
+        );
+      })}
     </Pressable>
   );
 

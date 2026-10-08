@@ -9,7 +9,7 @@ import { useAppSelector } from '../src/redux/hooks';
 import { selectTSConnected, selectIsMarketController } from '../src/redux/globalsSlice';
 import { handleLogout } from '../src/services/logout';
 import { formatStatus } from '../src/common/format';
-import { DarkTheme } from '../src/common/theme';
+import { codeColorForStatus, DarkTheme } from '../src/common/theme';
 import { sendExchangeChangeStatus, sendExchangeCancelAllOrders } from '../src/services/exchange_messages';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
 import { STATUS_ACTIVE, STATUS_SUSPEND } from '../src/common/common';
@@ -119,7 +119,7 @@ export default function ExchangesScreen() {
         setActionTarget(item);
       }}
     >
-      <Text style={[styles.codeText, { color: DarkTheme.codeText }]} numberOfLines={1}>
+      <Text style={[styles.codeText, { color: codeColorForStatus(item.status) }]} numberOfLines={1}>
         {item.code ?? ''}
       </Text>
     </Pressable>

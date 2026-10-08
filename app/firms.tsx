@@ -11,7 +11,7 @@ import {
 } from '../src/redux/globalsSlice';
 import { handleLogout } from '../src/services/logout';
 import { formatStatus } from '../src/common/format';
-import { DarkTheme } from '../src/common/theme';
+import { codeColorForStatus, DarkTheme } from '../src/common/theme';
 import { convertFirmType } from '../src/common/user_constants';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
 import {
@@ -129,7 +129,7 @@ export default function FirmsScreen() {
       onPress={() => console.log('[firms] tapped:', item.code)}
       onLongPress={() => openMenu(item)}
     >
-      <Text style={[styles.codeText, { color: DarkTheme.codeText }]} numberOfLines={1}>
+      <Text style={[styles.codeText, { color: codeColorForStatus(item.status) }]} numberOfLines={1}>
         {item.code ?? ''}
       </Text>
     </Pressable>
