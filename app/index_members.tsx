@@ -1,18 +1,23 @@
 // app/index_members.tsx
-import { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
   StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppSelector } from '../src/redux/hooks';
-import { selectTSConnected, selectIsMarketController } from '../src/redux/globalsSlice';
+import { selectTSConnected, selectIsMarketController, selectTSUserId } from '../src/redux/globalsSlice';
 import { handleLogout } from '../src/services/logout';
 import { formatPrice, formatStatus } from '../src/common/format';
 import { DarkTheme } from '../src/common/theme';
+import { ConfirmDialog } from '../src/components/ConfirmDialog';
+import { sendIndexMemberStatus } from '../src/services/index_member_messages';
 
 const IDX_WIDTH = 110;
 const ROW_HEIGHT = 36;
+
+const STATUS_ACTIVE   = 'A';
+const STATUS_SUSPENDED = 'S';
 
 type ColumnFormat = 'text' | 'int' | 'price' | 'status' | 'dec2';
 
@@ -37,11 +42,17 @@ export default function IndexMembersScreen() {
   const router = useRouter();
   const connected = useAppSelector(selectTSConnected);
   const isMarketController = useAppSelector(selectIsMarketController);
+  const submitter = useAppSelector(selectTSUserId);
   const members = useAppSelector(
     (s: any) => s.tables.tables.IndexMembersTable ?? EMPTY_ARRAY
   );
 
-  // Sort by index, then by instrument
+  const [actionTarget, setActionTarget] = useState<any | null>(null);
+  const [pendingAction, setPendingAction] = useState<
+    | { kind: 'status'; member: any; newStatus: string }
+    | null
+  >(null);
+
   const sortedMembers = useMemo(() => {
     return [...members].sort((a, b) => {
       const ia = String(a.idx ?? '');
@@ -84,7 +95,7 @@ export default function IndexMembersScreen() {
 
     switch (col.format) {
       case 'price':  return formatPrice(raw, item.price_dec ?? 0);
-      case 'dec2':   return formatPrice(raw, 2);   // ← always 2 decimals
+      case 'dec2':   return formatPrice(raw, 2);
       case 'int':    return String(raw);
       case 'status': return formatStatus(raw);
       case 'text':
@@ -98,10 +109,27 @@ export default function IndexMembersScreen() {
       switch (s) {
         case 'A': return DarkTheme.positive;
         case 'S': return DarkTheme.negative;
+        case 'D': return DarkTheme.textMuted;
         default:  return DarkTheme.textMuted;
       }
     }
     return DarkTheme.text;
+  };
+
+  const memberCodeColor = (item: any): string => {
+    const s = String(item.status ?? '').trim().toUpperCase();
+    switch (s) {
+      case 'S':
+        return DarkTheme.negative;
+      case 'D':
+        return DarkTheme.textMuted;
+      default:
+        return DarkTheme.codeText;
+    }
+  };
+  const openMenu = (item: any) => {
+    if (!isMarketController) return;
+    setActionTarget(item);
   };
 
   const renderIdxCell = ({ item, index }: { item: any; index: number }) => (
@@ -116,10 +144,12 @@ export default function IndexMembersScreen() {
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
       onPress={() => console.log('[index_members] tapped:', item.idx, item.instr)}
+      onLongPress={() => openMenu(item)}
     >
-      <Text style={[styles.idxText, { color: DarkTheme.codeText }]} numberOfLines={1}>
-        {item.idx ?? ''}
-      </Text>
+      
+    <Text style={[styles.idxText, { color: memberCodeColor(item) }]} numberOfLines={1}>
+      {item.idx ?? ''}
+    </Text>
     </Pressable>
   );
 
@@ -131,6 +161,7 @@ export default function IndexMembersScreen() {
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
       onPress={() => console.log('[index_members] tapped:', item.idx, item.instr)}
+      onLongPress={() => openMenu(item)}
     >
       {COLUMNS.map((col) => (
         <Text
@@ -152,6 +183,12 @@ export default function IndexMembersScreen() {
       ))}
     </Pressable>
   );
+
+  const menuStatus = actionTarget ? String(actionTarget.status ?? '').toUpperCase() : '';
+  const menuIsActive = menuStatus === STATUS_ACTIVE;
+  const menuIsDefunct = menuStatus === 'D';
+  const menuStatusLabel = menuIsActive ? 'Suspend' : 'Activate';
+  const menuStatusTarget = menuIsActive ? STATUS_SUSPENDED : STATUS_ACTIVE;
 
   return (
     <View style={[styles.container, { backgroundColor: DarkTheme.background }]}>
@@ -250,6 +287,91 @@ export default function IndexMembersScreen() {
           />
         </ScrollView>
       </View>
+
+      {/* ---------------- Row action menu ---------------- */}
+      {actionTarget && (
+        <ConfirmDialog
+          visible={true}
+          title={`Member: ${actionTarget.instr} / ${actionTarget.idx}`}
+          message={menuIsDefunct ? 'Member is Defunct — only Create and Modify available' : 'Choose an action'}
+          variant="default"
+          actions={[
+            {
+              label: 'Back',
+              style: 'cancel',
+              onPress: () => setActionTarget(null),
+            },
+            {
+              label: 'Create Member',
+              style: 'success',
+              onPress: () => {
+                const idx = actionTarget.idx;
+                const instr = actionTarget.instr;
+                setActionTarget(null);
+                router.push({ pathname: '/index_member_create', params: { idx, instr } });
+              },
+            },
+            {
+              label: 'Modify Member',
+              style: 'success',
+              onPress: () => {
+                const idx = actionTarget.idx;
+                const instr = actionTarget.instr;
+                setActionTarget(null);
+                router.push({ pathname: '/index_member_modify', params: { idx, instr } });
+              },
+            },
+            ...(menuIsDefunct ? [] : [{
+              label: menuStatusLabel,
+              style: (menuIsActive ? 'destructive' : 'success') as 'destructive' | 'success',
+              onPress: () => {
+                const m = actionTarget;
+                setActionTarget(null);
+                setPendingAction({ kind: 'status', member: m, newStatus: menuStatusTarget });
+              },
+            }]),
+          ]}
+          onClose={() => setActionTarget(null)}
+        />
+      )}
+
+      {/* ---------------- Confirm status change ---------------- */}
+      {pendingAction?.kind === 'status' && (
+        <ConfirmDialog
+          visible={true}
+          title="Confirm Status Change"
+          message={`Set member ${pendingAction.member.instr} (${pendingAction.member.idx}) to ${
+            pendingAction.newStatus === STATUS_SUSPENDED ? 'Suspended' : 'Active'
+          }?`}
+          variant="error"
+          accentColor={
+            pendingAction.newStatus === STATUS_ACTIVE
+              ? DarkTheme.positive
+              : DarkTheme.negative
+          }
+          actions={[
+            { label: 'No', style: 'cancel', onPress: () => {} },
+            {
+              label: 'Confirm',
+              style:
+                pendingAction.newStatus === STATUS_ACTIVE ? 'success' : 'destructive',
+              onPress: () => {
+                const m = pendingAction.member;
+                const ns = pendingAction.newStatus;
+                setPendingAction(null);
+                const ok = sendIndexMemberStatus(
+                  String(m.idx),
+                  String(m.instr),
+                  ns,
+                  submitter,
+                );
+                if (!ok) console.warn('[index_members] not connected');
+              },
+            },
+          ]}
+          onClose={() => setPendingAction(null)}
+        />
+      )}
     </View>
   );
 }

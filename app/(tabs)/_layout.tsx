@@ -36,7 +36,7 @@ export default function TabsLayout() {
       >
         <Tabs.Screen
           name="instruments"
-          options={{ title: 'Instr', tabBarIcon: ({ focused }) => <TabIcon label="📊" focused={focused} /> }}
+          options={{ title: 'Instruments', tabBarIcon: ({ focused }) => <TabIcon label="📊" focused={focused} /> }}
         />
         <Tabs.Screen
           name="orders"

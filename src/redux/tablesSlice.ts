@@ -68,6 +68,8 @@ function rowMatches(a: any, b: any, table: string): boolean {
       }
       break;
 
+    case 'IndicesTable':
+      return String(a.idx ?? '') === String(b.idx ?? '');
     // Everything else: fall through to generic id/code
   }
 

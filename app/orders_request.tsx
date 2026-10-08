@@ -7,6 +7,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAppSelector } from '../src/redux/hooks';
 import { selectTableData } from '../src/redux/globalsSlice';
+import { store } from '../src/redux/store';
 import {
   sendOrderSearchByNumber,
   sendOrderSearchByUserAndInstrument,
@@ -35,14 +36,9 @@ export default function OrdersRequestScreen() {
   const [instrumentCode, setInstrumentCode] = useState('');
 
   // Common
-  const [removeExisting, setRemoveExisting] = useState(false);
+  const [removeExisting, setRemoveExisting] = useState(true);
 
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState<
-    | { kind: 'byNumber'; oNum: number }
-    | { kind: 'byUser'; user: string; instr: string }
-    | null
-  >(null);
 
   // Instrument options — filter out currency types
   const instrumentOptions = useMemo(() => {
@@ -70,7 +66,18 @@ export default function OrdersRequestScreen() {
       setValidationError('Enter a valid order number.');
       return;
     }
-    setConfirm({ kind: 'byNumber', oNum: n });
+
+    if (removeExisting) {
+      store.dispatch({ type: 'tables/clearTable', payload: 'UsersOrdersTable' });
+    }
+
+    const ok = sendOrderSearchByNumber(n);
+
+    if (!ok) {
+      setValidationError('The socket is not open. Try again.');
+      return;
+    }
+    router.back();
   };
 
   const onSubmitByUser = () => {
@@ -82,42 +89,18 @@ export default function OrdersRequestScreen() {
       setValidationError('Select an instrument.');
       return;
     }
-    setConfirm({ kind: 'byUser', user: userCode, instr: instrumentCode });
-  };
 
-  const doSend = () => {
-    if (!confirm) return;
-
-    // Optional: clear the table first
     if (removeExisting) {
-      // We dispatch to the Redux tables slice. Using the store directly
-      // because we're outside a component that has dispatch from Redux.
-      const { store } = require('../src/redux/store');
       store.dispatch({ type: 'tables/clearTable', payload: 'UsersOrdersTable' });
     }
 
-    let ok = false;
-    if (confirm.kind === 'byNumber') {
-      ok = sendOrderSearchByNumber(confirm.oNum);
-    } else {
-      ok = sendOrderSearchByUserAndInstrument(confirm.user, confirm.instr);
-    }
-
-    setConfirm(null);
+    const ok = sendOrderSearchByUserAndInstrument(userCode, instrumentCode);
 
     if (!ok) {
       setValidationError('The socket is not open. Try again.');
       return;
     }
     router.back();
-  };
-
-  const summaryText = (): string => {
-    if (!confirm) return '';
-    if (confirm.kind === 'byNumber') {
-      return `Request order number: ${confirm.oNum}`;
-    }
-    return `Request orders for user: ${confirm.user}, instrument: ${confirm.instr}`;
   };
 
   return (
@@ -172,23 +155,21 @@ export default function OrdersRequestScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         {tab === 'byNumber' && (
-          <>
-            <View style={styles.inputBlock}>
-              <Text style={[styles.label, { color: DarkTheme.textMuted }]}>
-                Order Number
-              </Text>
-              <TextInput
-                value={orderNumber}
-                onChangeText={setOrderNumber}
-                keyboardType="number-pad"
-                placeholderTextColor={DarkTheme.textMuted}
-                style={[
-                  styles.input,
-                  { color: DarkTheme.text, borderColor: DarkTheme.cellBorder, backgroundColor: DarkTheme.surface },
-                ]}
-              />
-            </View>
-          </>
+          <View style={styles.inputBlock}>
+            <Text style={[styles.label, { color: DarkTheme.textMuted }]}>
+              Order Number
+            </Text>
+            <TextInput
+              value={orderNumber}
+              onChangeText={setOrderNumber}
+              keyboardType="number-pad"
+              placeholderTextColor={DarkTheme.textMuted}
+              style={[
+                styles.input,
+                { color: DarkTheme.text, borderColor: DarkTheme.cellBorder, backgroundColor: DarkTheme.surface },
+              ]}
+            />
+          </View>
         )}
 
         {tab === 'byUser' && (
@@ -243,7 +224,7 @@ export default function OrdersRequestScreen() {
         </View>
       </ScrollView>
 
-      {/* Validation dialog */}
+      {/* Validation dialog only — no confirmation */}
       <ConfirmDialog
         visible={validationError !== null}
         title="Order Request"
@@ -251,19 +232,6 @@ export default function OrdersRequestScreen() {
         variant="error"
         actions={[{ label: 'OK', style: 'default', onPress: () => {} }]}
         onClose={() => setValidationError(null)}
-      />
-
-      {/* Confirmation dialog */}
-      <ConfirmDialog
-        visible={confirm !== null}
-        title="Orders Request"
-        message={summaryText()}
-        variant="default"
-        actions={[
-          { label: 'Back', style: 'cancel', onPress: () => {} },
-          { label: 'Submit', style: 'default', onPress: doSend },
-        ]}
-        onClose={() => setConfirm(null)}
       />
     </View>
   );

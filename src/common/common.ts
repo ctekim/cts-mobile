@@ -942,6 +942,26 @@ export const tableOptions = [
   { id: TABLES_TRADES, name: TABLES_NAME_TRADES },
   { id: TABLES_USERS, name: TABLES_NAME_USERS },
 ];
+export function ConvertFromTradingRulesValueName(value: string) { 
+  switch (value) {
+    case NAME_YES:
+      return YES;
+    case NAME_NO:
+      return NO;
+    case TRADING_RULES_NAME_BOTH:
+      return TRADING_RULES_BOTH;
+    case TRADING_RULES_NAME_ONE_SIDE:
+      return TRADING_RULES_ONE_SIDE;
+    case TRADING_RULES_NAME_FULL_HOLDINGS_CHECK:
+      return TRADING_RULES_FULL_HOLDINGS_CHECK;
+    case TRADING_RULES_NAME_APPROVAL_HOLDINGS_CHECK:
+      return TRADING_RULES_APPROVAL_HOLDINGS_CHECK;
+    case TRADING_RULES_NAME_PARENT_HOLDINGS_CHECK:
+      return TRADING_RULES_PARENT_HOLDINGS_CHECK;
+    default:
+      return NO;
+  }
+}
 
 // export function ConvertTable(table) {
 //   switch (table) {

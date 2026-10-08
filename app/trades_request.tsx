@@ -39,14 +39,9 @@ export default function TradesRequestScreen() {
   const [instrumentCode, setInstrumentCode] = useState('');
 
   // Common
-  const [removeExisting, setRemoveExisting] = useState(false);
+  const [removeExisting, setRemoveExisting] = useState(true);
 
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState<
-    | { kind: 'byOrder'; oNum: number }
-    | { kind: 'byUser'; user: string; instr: string }
-    | null
-  >(null);
 
   // Instrument options — filter out currency types
   const instrumentOptions = useMemo(() => {
@@ -74,7 +69,18 @@ export default function TradesRequestScreen() {
       setValidationError('Enter a valid trade number.');
       return;
     }
-    setConfirm({ kind: 'byOrder', oNum: n });
+
+    if (removeExisting) {
+      store.dispatch({ type: 'tables/clearTable', payload: 'UsersTradesTable' });
+    }
+
+    const ok = sendTradeSearchByTradeNumber(n);
+
+    if (!ok) {
+      setValidationError('The socket is not open. Try again.');
+      return;
+    }
+    router.back();
   };
 
   const onSubmitByUser = () => {
@@ -86,38 +92,18 @@ export default function TradesRequestScreen() {
       setValidationError('Select an instrument.');
       return;
     }
-    setConfirm({ kind: 'byUser', user: userCode, instr: instrumentCode });
-  };
-
-  const doSend = () => {
-    if (!confirm) return;
 
     if (removeExisting) {
       store.dispatch({ type: 'tables/clearTable', payload: 'UsersTradesTable' });
     }
 
-    let ok = false;
-    if (confirm.kind === 'byOrder') {
-      ok = sendTradeSearchByTradeNumber(confirm.oNum);
-    } else {
-      ok = sendTradeSearchByUserAndInstrument(confirm.user, confirm.instr);
-    }
-
-    setConfirm(null);
+    const ok = sendTradeSearchByUserAndInstrument(userCode, instrumentCode);
 
     if (!ok) {
       setValidationError('The socket is not open. Try again.');
       return;
     }
     router.back();
-  };
-
-  const summaryText = (): string => {
-    if (!confirm) return '';
-    if (confirm.kind === 'byOrder') {
-      return `Request trades for trade number: ${confirm.oNum}`;
-    }
-    return `Request trades for user: ${confirm.user}, instrument: ${confirm.instr}`;
   };
 
   return (
@@ -242,18 +228,6 @@ export default function TradesRequestScreen() {
         variant="error"
         actions={[{ label: 'OK', style: 'default', onPress: () => {} }]}
         onClose={() => setValidationError(null)}
-      />
-
-      <ConfirmDialog
-        visible={confirm !== null}
-        title="Trades Request"
-        message={summaryText()}
-        variant="default"
-        actions={[
-          { label: 'Back', style: 'cancel', onPress: () => {} },
-          { label: 'Submit', style: 'default', onPress: doSend },
-        ]}
-        onClose={() => setConfirm(null)}
       />
     </View>
   );

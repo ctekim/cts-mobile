@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppSelector } from '../src/redux/hooks';
-import { selectTableData } from '../src/redux/globalsSlice';
+import { selectTableData, selectTSUserId } from '../src/redux/globalsSlice';
 import { store } from '../src/redux/store';
 import { sendHoldingsSearch } from '../src/services/holdings_messages';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
@@ -23,13 +23,13 @@ export default function HoldingsRequestScreen() {
   const tradingAccounts = useAppSelector(
     (s: any) => s.tables.tables.TradingAccountsTable ?? []
   );
+  const submitter = useAppSelector(selectTSUserId);
 
   const [tradingAccount, setTradingAccount] = useState('');
   const [instrumentCode, setInstrumentCode] = useState('');
-  const [removeExisting, setRemoveExisting] = useState(false);
+  const [removeExisting, setRemoveExisting] = useState(true);
 
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Instrument options — filter out currency types
   const instrumentOptions = useMemo(() => {
@@ -54,10 +54,7 @@ export default function HoldingsRequestScreen() {
       setValidationError('Select a trading account.');
       return;
     }
-    setConfirmOpen(true);
-  };
 
-  const doSend = () => {
     if (removeExisting) {
       store.dispatch({ type: 'tables/clearTable', payload: 'HoldingsTable' });
     }
@@ -65,22 +62,14 @@ export default function HoldingsRequestScreen() {
     const ok = sendHoldingsSearch(
       tradingAccount,
       instrumentCode || undefined,
+      submitter,
     );
-
-    setConfirmOpen(false);
 
     if (!ok) {
       setValidationError('The socket is not open. Try again.');
       return;
     }
     router.back();
-  };
-
-  const summaryText = (): string => {
-    if (!tradingAccount) return '';
-    return instrumentCode
-      ? `Request holdings for account: ${tradingAccount}, instrument: ${instrumentCode}`
-      : `Request all holdings for account: ${tradingAccount}`;
   };
 
   return (
@@ -145,7 +134,7 @@ export default function HoldingsRequestScreen() {
         </View>
       </ScrollView>
 
-      {/* Validation dialog */}
+      {/* Validation dialog only — no confirmation */}
       <ConfirmDialog
         visible={validationError !== null}
         title="Holdings Request"
@@ -153,19 +142,6 @@ export default function HoldingsRequestScreen() {
         variant="error"
         actions={[{ label: 'OK', style: 'default', onPress: () => {} }]}
         onClose={() => setValidationError(null)}
-      />
-
-      {/* Confirmation dialog */}
-      <ConfirmDialog
-        visible={confirmOpen}
-        title="Holdings Request"
-        message={summaryText()}
-        variant="default"
-        actions={[
-          { label: 'Back', style: 'cancel', onPress: () => {} },
-          { label: 'Submit', style: 'default', onPress: doSend },
-        ]}
-        onClose={() => setConfirmOpen(false)}
       />
     </View>
   );

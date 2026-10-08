@@ -21,6 +21,23 @@ import {
   SELL_SIDE,
 } from '../common/common';
 
+import { MSG_TYPE_HOLDINGS_SEARCH_REQUEST } from '../common/msg_types';
+// import { EVENT_TYPE_HOLDINGS_REQUEST } from '../common/common';
+
+export function sendHoldingsSearch(
+  tradingAccount: string,
+  instrument?: string,
+  submitter?: string,
+): boolean {
+  const payload: Record<string, any> = {
+    [JSON_KEY_MESSAGE_TYPE]: MSG_TYPE_HOLDINGS_SEARCH_REQUEST,
+    [JSON_KEY_TRADING_ACCOUNT]: tradingAccount,
+  };
+  if (instrument) payload[JSON_KEY_INSTRUMENT] = instrument;
+  if (submitter) payload[JSON_KEY_SUBMITTER] = submitter;
+  return sendTsMessage(payload);
+}
+
 // ---- ported from web utilies ----
 export function to64BitIntFromPriceString(priceStr: any, priceDecimals: number): number {
   const factor = Math.pow(10, priceDecimals);

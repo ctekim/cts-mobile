@@ -7,11 +7,7 @@ const STATUS_LABELS: Record<string, string> = {
   A: 'Active',
   S: 'Suspended',
   O: 'Open',
-  // add others as you encounter them:
-  // I: 'Inactive',
-  // D: 'Delisted',
-  // H: 'Halted',
-  // P: 'Pending',
+  N: 'New',
 };
 
 export function formatStatus(raw: any): string {

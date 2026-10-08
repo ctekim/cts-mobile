@@ -35,7 +35,7 @@ export default function TradeEntryScreen() {
   const [sellAccount, setSellAccount] = useState('');
   const [price, setPrice] = useState('');
   const [qty, setQty] = useState('');
-  const [updateStats, setUpdateStats] = useState(false);
+  const [updateStats, setUpdateStats] = useState(true);
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);

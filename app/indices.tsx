@@ -1,15 +1,21 @@
 // app/(tabs)/indices.tsx
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
   StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppSelector } from '../src/redux/hooks';
-import { selectTSConnected } from '../src/redux/globalsSlice';
+import {
+  selectTSConnected,
+  selectIsMarketController,
+} from '../src/redux/globalsSlice';
 import { handleLogout } from '../src/services/logout';
 import { formatPrice, formatStatus } from '../src/common/format';
 import { DarkTheme } from '../src/common/theme';
+import { ConfirmDialog } from '../src/components/ConfirmDialog';
+import { sendIndexChangeStatus } from '../src/services/index_messages';
+import { STATUS_ACTIVE, STATUS_SUSPEND } from '../src/common/common';
 
 const IDX_WIDTH = 110;
 const ROW_HEIGHT = 36;
@@ -35,9 +41,16 @@ const EMPTY_ARRAY: any[] = [];
 export default function IndicesScreen() {
   const router = useRouter();
   const connected = useAppSelector(selectTSConnected);
+  const isMarketController = useAppSelector(selectIsMarketController);
   const indices = useAppSelector(
     (s: any) => s.tables.tables.IndicesTable ?? EMPTY_ARRAY
   );
+
+  const [actionTarget, setActionTarget] = useState<any | null>(null);
+  const [pendingAction, setPendingAction] = useState<
+    | { kind: 'suspend' | 'activate'; index: string; newStatus: string; withdraw: 'Y' | 'N' }
+    | null
+  >(null);
 
   const leftListRef = useRef<FlatList<any>>(null);
   const headerScrollRef = useRef<ScrollView>(null);
@@ -91,6 +104,22 @@ export default function IndicesScreen() {
     return DarkTheme.text;
   };
 
+  // ----- Index code color (red when suspended, grey when inactive, default otherwise) -----
+  const indexCodeColor = (item: any): string => {
+    const s = String(item.status ?? '').trim().toUpperCase();
+    switch (s) {
+      case 'S':
+        return DarkTheme.negative;
+      case 'N':       // New
+      case 'I':       // Inactive
+      case 'D':       // Deleted
+      case 'H':       // Halted
+        return DarkTheme.textMuted;
+      default:
+        return DarkTheme.codeText;
+    }
+  };
+
   // ----- Renderers -----
   const renderIdxCell = ({ item, index }: { item: any; index: number }) => (
     <Pressable
@@ -104,8 +133,12 @@ export default function IndicesScreen() {
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
       onPress={() => console.log('[indices] tapped:', item.idx)}
+      onLongPress={() => {
+        if (!isMarketController) return;
+        setActionTarget(item);
+      }}
     >
-      <Text style={[styles.idxText, { color: DarkTheme.codeText }]} numberOfLines={1}>
+      <Text style={[styles.idxText, { color: indexCodeColor(item) }]} numberOfLines={1}>
         {item.idx ?? ''}
       </Text>
     </Pressable>
@@ -121,6 +154,10 @@ export default function IndicesScreen() {
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
       onPress={() => console.log('[indices] tapped:', item.idx)}
+      onLongPress={() => {
+        if (!isMarketController) return;
+        setActionTarget(item);
+      }}
     >
       {COLUMNS.map((col) => (
         <Text
@@ -242,6 +279,106 @@ export default function IndicesScreen() {
           />
         </ScrollView>
       </View>
+
+      {/* ---------------- Row action menu ---------------- */}
+      {actionTarget && (
+        <ConfirmDialog
+          visible={true}
+          title={`Index: ${actionTarget.idx}`}
+          message="Choose an action"
+          variant="default"
+          actions={[
+            {
+              label: 'Back',
+              style: 'cancel',
+              onPress: () => {},
+            },
+            {
+              label: 'Create New',
+              style: 'success',
+              onPress: () => {
+                setActionTarget(null);
+                router.push('/index_create');
+              },
+            },
+            {
+              label: 'Modify',
+              style: 'success',
+              onPress: () => {
+                const idx = actionTarget.idx;
+                setActionTarget(null);
+                router.push({ pathname: '/index_modify', params: { idx } });
+              },
+            },
+            {
+              label:
+                String(actionTarget.status).toUpperCase() === STATUS_ACTIVE
+                  ? 'Suspend'
+                  : 'Activate',
+              style:
+                String(actionTarget.status).toUpperCase() === STATUS_ACTIVE
+                  ? 'destructive'
+                  : 'success',
+              onPress: () => {
+                const idx = actionTarget.idx;
+                const current = String(actionTarget.status).toUpperCase();
+                const newStatus =
+                  current === STATUS_ACTIVE ? STATUS_SUSPEND : STATUS_ACTIVE;
+                const withdraw: 'Y' | 'N' =
+                  newStatus === STATUS_SUSPEND ? 'Y' : 'N';
+                setActionTarget(null);
+                setPendingAction({
+                  kind: newStatus === STATUS_SUSPEND ? 'suspend' : 'activate',
+                  index: idx,
+                  newStatus,
+                  withdraw,
+                });
+              },
+            },
+          ]}
+          onClose={() => setActionTarget(null)}
+        />
+      )}
+
+      {/* ---------------- Confirm status change ---------------- */}
+      {pendingAction && (
+        <ConfirmDialog
+          visible={true}
+          title="Confirm Action"
+          message={`Set index ${pendingAction.index} to ${
+            pendingAction.kind === 'suspend' ? 'Suspended' : 'Active'
+          }?`}
+          variant="error"
+          accentColor={
+            pendingAction.kind === 'activate'
+              ? DarkTheme.positive
+              : DarkTheme.negative
+          }
+          actions={[
+            {
+              label: 'No',
+              style: 'cancel',
+              onPress: () => {},
+            },
+            {
+              label: 'Confirm',
+              style:
+                pendingAction.kind === 'activate' ? 'success' : 'destructive',
+              onPress: () => {
+                const action = pendingAction;
+                setPendingAction(null);
+                const ok = sendIndexChangeStatus(
+                  action.index,
+                  action.newStatus,
+                  action.withdraw,
+                );
+                if (!ok) console.warn('[indices] not connected');
+              },
+            },
+          ]}
+          onClose={() => setPendingAction(null)}
+        />
+      )}
     </View>
   );
 }
