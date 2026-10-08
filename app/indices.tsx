@@ -120,65 +120,77 @@ export default function IndicesScreen() {
     }
   };
 
-  // ----- Renderers -----
-  const renderIdxCell = ({ item, index }: { item: any; index: number }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.idxCell,
-        {
-          backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
-          borderBottomColor: DarkTheme.cellBorder,
-          borderRightColor: DarkTheme.codeColumnBorder,
-        },
-        pressed && { backgroundColor: DarkTheme.surfacePressed },
-      ]}
-      onPress={() => console.log('[indices] tapped:', item.idx)}
-      onLongPress={() => {
-        if (!isMarketController) return;
-        setActionTarget(item);
-      }}
-    >
-      <Text style={[styles.idxText, { color: indexCodeColor(item) }]} numberOfLines={1}>
-        {item.idx ?? ''}
-      </Text>
-    </Pressable>
-  );
+  const isActiveStatus = (item: any): boolean => String(item.status ?? '').trim().toUpperCase() === 'A';
 
-  const renderDataRow = ({ item, index }: { item: any; index: number }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.dataRow,
-        {
-          backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
-        },
-        pressed && { backgroundColor: DarkTheme.surfacePressed },
-      ]}
-      onPress={() => console.log('[indices] tapped:', item.idx)}
-      onLongPress={() => {
-        if (!isMarketController) return;
-        setActionTarget(item);
-      }}
-    >
-      {COLUMNS.map((col) => (
-        <Text
-          key={col.key}
-          style={[
-            styles.dataCell,
-            {
-              width: col.width,
-              borderRightColor: DarkTheme.cellBorder,
-              borderBottomColor: DarkTheme.cellBorder,
-              color: cellColor(item, col),
-            },
-            col.format === 'price' && styles.num,
-          ]}
-          numberOfLines={1}
-        >
-          {cellText(item, col)}
+  // ----- Renderers -----
+  const renderIdxCell = ({ item, index }: { item: any; index: number }) => {
+    const isActive = isActiveStatus(item);
+
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.idxCell,
+          {
+            backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
+            borderBottomColor: DarkTheme.cellBorder,
+            borderRightColor: DarkTheme.codeColumnBorder,
+            opacity: isActive ? 1 : 0.6,
+          },
+          pressed && { backgroundColor: DarkTheme.surfacePressed },
+        ]}
+        onPress={() => console.log('[indices] tapped:', item.idx)}
+        onLongPress={() => {
+          if (!isMarketController) return;
+          setActionTarget(item);
+        }}
+      >
+        <Text style={[styles.idxText, { color: indexCodeColor(item) }]} numberOfLines={1}>
+          {item.idx ?? ''}
         </Text>
-      ))}
-    </Pressable>
-  );
+      </Pressable>
+    );
+  };
+
+  const renderDataRow = ({ item, index }: { item: any; index: number }) => {
+    const isActive = String(item.status ?? '').trim().toUpperCase() === 'A';
+
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.dataRow,
+          {
+            backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
+            opacity: isActive ? 1 : 0.6,
+          },
+          pressed && { backgroundColor: DarkTheme.surfacePressed },
+        ]}
+        onPress={() => console.log('[indices] tapped:', item.idx)}
+        onLongPress={() => {
+          if (!isMarketController) return;
+          setActionTarget(item);
+        }}
+      >
+        {COLUMNS.map((col) => (
+          <Text
+            key={col.key}
+            style={[
+              styles.dataCell,
+              {
+                width: col.width,
+                borderRightColor: DarkTheme.cellBorder,
+                borderBottomColor: DarkTheme.cellBorder,
+                color: cellColor(item, col),
+              },
+              col.format === 'price' && styles.num,
+            ]}
+            numberOfLines={1}
+          >
+            {cellText(item, col)}
+          </Text>
+        ))}
+      </Pressable>
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: DarkTheme.background }]}>
