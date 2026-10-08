@@ -1,7 +1,7 @@
 // app/(tabs)/notifications.tsx
-import { useRef, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import {
-  View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
+  View, Text, FlatList, ScrollView, TouchableOpacity, Pressable, Modal,
   StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -15,20 +15,19 @@ import {
 } from '../../src/common/notification_constants';
 
 const ID_WIDTH = 60;
-const ROW_HEIGHT = 44;   // taller rows — messages wrap to 2 lines
+const ROW_HEIGHT = 44;
 const MESSAGE_WIDTH = 400;
 
 const EMPTY_ARRAY: any[] = [];
 
-// Severity → color mapping
 function severityColor(severity: any): string {
   switch (severityKey(severity)) {
-    case 'info':     return DarkTheme.text;         // white
-    case 'warning':  return '#e0a020';            // amber
-    case 'error':    return DarkTheme.negative;     // red
-    case 'critical': return DarkTheme.negative;     // red
-    case 'admin':    return DarkTheme.codeText;     // cyan
-    default:         return DarkTheme.textMuted;    // gray
+    case 'info':     return DarkTheme.text;
+    case 'warning':  return '#e0a020';
+    case 'error':    return DarkTheme.negative;
+    case 'critical': return DarkTheme.negative;
+    case 'admin':    return DarkTheme.codeText;
+    default:         return DarkTheme.textMuted;
   }
 }
 
@@ -41,6 +40,7 @@ export default function NotificationsScreen() {
 
   const leftListRef = useRef<FlatList<any>>(null);
   const headerScrollRef = useRef<ScrollView>(null);
+  const [selected, setSelected] = useState<any | null>(null);
 
   useEffect(() => {
     if (!connected) router.replace('/');
@@ -77,7 +77,7 @@ export default function NotificationsScreen() {
         },
         pressed && { backgroundColor: DarkTheme.surfacePressed },
       ]}
-      onPress={() => console.log('[notifications] tapped:', item.id)}
+      onPress={() => setSelected(item)}
     >
       <Text style={[styles.idText, { color: DarkTheme.codeText }]} numberOfLines={1}>
         {item.id ?? ''}
@@ -97,9 +97,8 @@ export default function NotificationsScreen() {
           },
           pressed && { backgroundColor: DarkTheme.surfacePressed },
         ]}
-        onPress={() => console.log('[notifications] tapped:', item.id)}
+        onPress={() => setSelected(item)}
       >
-        {/* Time */}
         <Text
           style={[
             styles.dataCell,
@@ -110,7 +109,6 @@ export default function NotificationsScreen() {
           {item.time ?? ''}
         </Text>
 
-        {/* Severity */}
         <Text
           style={[
             styles.dataCell,
@@ -127,7 +125,6 @@ export default function NotificationsScreen() {
           {convertSeverity(item.ser)}
         </Text>
 
-        {/* User */}
         <Text
           style={[
             styles.dataCell,
@@ -138,7 +135,6 @@ export default function NotificationsScreen() {
           {item.user ?? ''}
         </Text>
 
-        {/* Message — colored by severity */}
         <Text
           style={[
             styles.dataCell,
@@ -256,6 +252,79 @@ export default function NotificationsScreen() {
           />
         </ScrollView>
       </View>
+
+      {/* ---------------- Detail modal ---------------- */}
+      <Modal
+        visible={selected !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelected(null)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setSelected(null)}>
+          <Pressable
+            style={[styles.modalCard, { backgroundColor: DarkTheme.surface }]}
+            onPress={() => {}}
+          >
+            <Text style={[styles.modalTitle, { color: DarkTheme.text }]}>
+              Notification #{selected?.id ?? ''}
+            </Text>
+
+            <View style={styles.metaRow}>
+              <Text style={[styles.metaLabel, { color: DarkTheme.textMuted }]}>Time</Text>
+              <Text style={[styles.metaValue, { color: DarkTheme.text }]}>
+                {selected?.time ?? ''}
+              </Text>
+            </View>
+
+            <View style={styles.metaRow}>
+              <Text style={[styles.metaLabel, { color: DarkTheme.textMuted }]}>Severity</Text>
+              <Text
+                style={[
+                  styles.metaValue,
+                  { color: severityColor(selected?.ser), fontWeight: 'bold' },
+                ]}
+              >
+                {convertSeverity(selected?.ser)}
+              </Text>
+            </View>
+
+            <View style={styles.metaRow}>
+              <Text style={[styles.metaLabel, { color: DarkTheme.textMuted }]}>User</Text>
+              <Text style={[styles.metaValue, { color: DarkTheme.text }]}>
+                {selected?.user ?? ''}
+              </Text>
+            </View>
+
+            <Text
+              style={[
+                styles.metaLabel,
+                { color: DarkTheme.textMuted, marginTop: 16 },
+              ]}
+            >
+              Message
+            </Text>
+            <ScrollView style={{ maxHeight: 320, marginTop: 6 }}>
+              <Text
+                style={[
+                  styles.messageText,
+                  { color: severityColor(selected?.ser) },
+                ]}
+              >
+                {selected?.tx ?? ''}
+              </Text>
+            </ScrollView>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: DarkTheme.surfaceAlt }]}
+                onPress={() => setSelected(null)}
+              >
+                <Text style={{ color: DarkTheme.text, fontWeight: 'bold' }}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -272,8 +341,6 @@ const styles = StyleSheet.create({
   toolbarTitle: { fontSize: 18, fontWeight: 'bold' },
   backBtn: { paddingVertical: 6, paddingHorizontal: 4, width: 60 },
   backText: { fontSize: 16, fontWeight: 'bold' },
-  logoutBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 },
-  logoutText: { color: '#fff', fontWeight: 'bold' },
 
   headerRow: { flexDirection: 'row', height: ROW_HEIGHT },
   headerScroll: { flex: 1 },
@@ -309,4 +376,55 @@ const styles = StyleSheet.create({
   },
 
   empty: { textAlign: 'center', marginTop: 40 },
+
+  // ---- modal ----
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '85%',
+    borderRadius: 12,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  metaLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  metaValue: {
+    fontSize: 14,
+  },
+  messageText: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 20,
+  },
+  modalBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 6,
+  },
 });
