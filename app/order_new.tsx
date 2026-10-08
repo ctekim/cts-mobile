@@ -23,6 +23,7 @@
       DURATION_IMMEDIATE,
       HIDDEN,
       FOK,
+      DURATION_SESSION,
    } from '../src/common/order_constants';
    import { INSTRUMENT_TYPE_CRYPTO_CURRENCY, INSTRUMENT_TYPE_CURRENCY } from '../src/common/common';
    import { ConfirmDialog } from '../src/components/ConfirmDialog';
@@ -35,9 +36,10 @@
 
    // Duration options
    const DURATION_OPTIONS = [
+   { value: DURATION_IMMEDIATE, label: 'Immediate' },
+   { value: DURATION_SESSION,   label: 'Session' },     
    { value: DURATION_DAY,       label: 'Day' },
    { value: DURATION_GTC,       label: 'GTC' },
-   { value: DURATION_IMMEDIATE, label: 'Immediate' },
    ];
 
    // Special type options
