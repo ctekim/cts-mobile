@@ -302,6 +302,21 @@ export default function HoldingsScreen() {
               onPress: () => setMenuAction(null),
             },
             {
+              label: 'Adjust Balances',
+              style: 'success',
+              onPress: () => {
+                const h = menuAction.holding;
+                setMenuAction(null);
+                router.push({
+                  pathname: '/holding_adjust',
+                  params: {
+                    trdacc: String(h.trdacc ?? ''),
+                    instr: String(h.instr ?? h.code ?? ''),
+                  },
+                });
+              },
+            },
+            {
               label: 'Create Holdings',
               style: 'success',
               onPress: () => {
@@ -339,21 +354,6 @@ export default function HoldingsScreen() {
                 setMenuAction(null);
                 router.push({
                   pathname: '/holding_clear_sell',
-                  params: {
-                    trdacc: String(h.trdacc ?? ''),
-                    instr: String(h.instr ?? h.code ?? ''),
-                  },
-                });
-              },
-            },
-            {
-              label: 'Adjust Balances',
-              style: 'success',
-              onPress: () => {
-                const h = menuAction.holding;
-                setMenuAction(null);
-                router.push({
-                  pathname: '/holding_adjust',
                   params: {
                     trdacc: String(h.trdacc ?? ''),
                     instr: String(h.instr ?? h.code ?? ''),

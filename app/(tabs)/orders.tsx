@@ -291,7 +291,10 @@ export default function OrdersScreen() {
   const renderDataRow = ({ item, index }: { item: any; index: number }) => {
     const isChild = item.kind === 'child';
     const row = item.row;
-    const isCancelled = String(row.status ?? '').toUpperCase() === 'W';
+    const status = String(row.status ?? '').toUpperCase();
+    const isLive =
+      status === ORDER_STATUS_OPEN ||
+      status === ORDER_STATUS_UNPLACED;
 
     return (
       <Pressable
@@ -299,7 +302,7 @@ export default function OrdersScreen() {
           styles.dataRow,
           {
             backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
-            opacity: isCancelled ? 0.6 : isChild ? 0.85 : 1,
+            opacity: isLive ? (isChild ? 0.85 : 1) : 0.6,
           },
           pressed && { backgroundColor: DarkTheme.surfacePressed },
         ]}

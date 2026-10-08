@@ -69,6 +69,7 @@ export default function HoldingClearSellScreen() {
     if (!instr) return 'Instrument is missing';
     if (!instrumentRow) return `Instrument ${instr} not loaded`;
     if (sellPending === '' || isNaN(Number(sellPending))) return 'Sell Pending must be a number';
+    if (Number(sellPending) <= 0) return 'Sell Pending must be greater than zero';
     return null;
   };
 

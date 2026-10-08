@@ -40,8 +40,8 @@ export default function HoldingCreateScreen() {
   const instrumentRow = useMemo(() => instruments?.[instr], [instruments, instr]);
   const decimals = instrumentRow?.qty_dec ?? 0;
 
-  const [total, setTotal] = useState('0');
-  const [available, setAvailable] = useState('0');
+  const [total, setTotal] = useState('');
+  const [available, setAvailable] = useState('');
   const [buyPending, setBuyPending] = useState('0');
   const [sellPending, setSellPending] = useState('0');
 

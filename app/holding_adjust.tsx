@@ -30,7 +30,7 @@ export default function HoldingAdjustScreen() {
   const instrumentRow = useMemo(() => instruments?.[instr], [instruments, instr]);
   const decimals = instrumentRow?.qty_dec ?? 0;
 
-  const [delta, setDelta] = useState('0');
+  const [delta, setDelta] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
 

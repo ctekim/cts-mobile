@@ -71,6 +71,7 @@ export default function HoldingClearBuyScreen() {
     if (!instr) return 'Instrument is missing';
     if (!instrumentRow) return `Instrument ${instr} not loaded`;
     if (buyPending === '' || isNaN(Number(buyPending))) return 'Buy Pending must be a number';
+    if (Number(buyPending) <= 0) return 'Buy Pending must be greater than zero';
     return null;
   };
 
