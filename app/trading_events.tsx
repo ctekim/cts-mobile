@@ -195,62 +195,74 @@ export default function TradingEventsScreen() {
   };
 
   // ---------- rows ----------
-  const renderIdCell = ({ item, index }: { item: any; index: number }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.idCell,
-        {
-          backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
-          borderBottomColor: DarkTheme.cellBorder,
-          borderRightColor: DarkTheme.codeColumnBorder,
-        },
-        pressed && { backgroundColor: DarkTheme.surfacePressed },
-      ]}
-      onPress={() => console.log('[trading_events] tapped:', item.id)}
-      onLongPress={() => openMenu(item)}
-    >
-      <Text style={[styles.idText, { color: DarkTheme.codeText }]} numberOfLines={1}>
-        {item.id ?? ''}
-      </Text>
-    </Pressable>
-  );
+  const renderIdCell = ({ item, index }: { item: any; index: number }) => {
+    const dim = isInactive(item);
 
-  const renderDataRow = ({ item, index }: { item: any; index: number }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.dataRow,
-        { backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface },
-        pressed && { backgroundColor: DarkTheme.surfacePressed },
-      ]}
-      onPress={() => console.log('[trading_events] tapped:', item.id)}
-      onLongPress={() => openMenu(item)}
-    >
-      {COLUMNS.map((col) => {
-        const color = col.key === 'code'
-          ? codeColorForStatus(item.status)
-          : cellColor(item, col);
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.idCell,
+          {
+            backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
+            borderBottomColor: DarkTheme.cellBorder,
+            borderRightColor: DarkTheme.codeColumnBorder,
+            opacity: dim ? 0.6 : 1,
+          },
+          pressed && { backgroundColor: DarkTheme.surfacePressed },
+        ]}
+        onPress={() => console.log('[trading_events] tapped:', item.id)}
+        onLongPress={() => openMenu(item)}
+      >
+        <Text style={[styles.idText, { color: DarkTheme.codeText }]} numberOfLines={1}>
+          {item.id ?? ''}
+        </Text>
+      </Pressable>
+    );
+  };
 
-        return (
-          <Text
-            key={col.key}
-            style={[
-              styles.dataCell,
-              {
-                width: col.width,
-                borderRightColor: DarkTheme.cellBorder,
-                borderBottomColor: DarkTheme.cellBorder,
-                color,
-              },
-              col.format === 'int' && styles.num,
-            ]}
-            numberOfLines={1}
-          >
-            {cellText(item, col)}
-          </Text>
-        );
-      })}
-    </Pressable>
-  );
+  const renderDataRow = ({ item, index }: { item: any; index: number }) => {
+    const dim = isInactive(item);
+
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.dataRow,
+          {
+            backgroundColor: index % 2 === 1 ? DarkTheme.surfaceAlt : DarkTheme.surface,
+            opacity: dim ? 0.6 : 1,
+          },
+          pressed && { backgroundColor: DarkTheme.surfacePressed },
+        ]}
+        onPress={() => console.log('[trading_events] tapped:', item.id)}
+        onLongPress={() => openMenu(item)}
+      >
+        {COLUMNS.map((col) => {
+          const color = col.key === 'code'
+            ? codeColorForStatus(item.status)
+            : cellColor(item, col);
+
+          return (
+            <Text
+              key={col.key}
+              style={[
+                styles.dataCell,
+                {
+                  width: col.width,
+                  borderRightColor: DarkTheme.cellBorder,
+                  borderBottomColor: DarkTheme.cellBorder,
+                  color,
+                },
+                col.format === 'int' && styles.num,
+              ]}
+              numberOfLines={1}
+            >
+              {cellText(item, col)}
+            </Text>
+          );
+        })}
+      </Pressable>
+    );
+  };
 
   // ---------- move form ----------
   const openMoveForm = () => {
@@ -273,6 +285,10 @@ export default function TradingEventsScreen() {
   // ---------- derived menu state ----------
   const menuTriggered = menuTarget ? isTriggered(menuTarget) : false;
   const menuStatusChangeable = menuTarget ? canChangeStatus(menuTarget) : false;
+  const isInactive = (item: any): boolean => {
+    const s = statusLetterOf(item);
+    return s === STATUS_SUSPEND_LETTER || s === STATUS_TRIGGERED_LETTER;
+  };
   const menuCurrentStatus = menuTarget ? statusLetterOf(menuTarget) : '';
   const menuStatusIsActive = menuCurrentStatus === STATUS_ACTIVE_LETTER;
   const menuStatusLabel = menuStatusIsActive ? 'Suspend' : 'Activate';
