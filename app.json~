@@ -8,7 +8,7 @@
     "scheme": "ctsmobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/images/cts-mobile-icon.icon"
+      "icon": "./assets/images/cts-mobile-icon-1.icon"
     },
     "android": {
       "adaptiveIcon": {
