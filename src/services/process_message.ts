@@ -114,7 +114,7 @@ const getDefaultLayout = () => ({});
 export function ProcessMessage(
   json_message: any,
   dispatch: Dispatch,
-  setLoggedOn: (v: boolean) => void,
+  onLogonResult: (outcome: 'success' | 'failed') => void,
   userId: string,
   isMarketController: boolean,
 ) {
@@ -226,26 +226,24 @@ export function ProcessMessage(
                   // HandleSuccessResult(`Logon OK. Next seq: ${sequenceNumber}`);
 
                   if (flag === FORCE_CHANGE_PASSWORD) {
-                  dispatch(setForcePasswordChange(true));
+                     dispatch(setForcePasswordChange(true));
                   } else {
-                  setLoggedOn(true);
+                     onLogonResult('success');
                   }
                   break;
                }
 
                case MSGTYPE_TS_LOGOFF:
-                  setLoggedOn(false);
                   closeTSConnection();
                   dispatch(resetGlobals());
                   dispatch({ type: 'tables/resetTables' });
                   break;
 
-
                case MSGTYPE_CHANGE_PASSWORD:
-                  console.log('Successful changed password');
+                  // console.log('Successful changed password');
                   HandleSuccessResult(`Successfully changed password`, true);
                   dispatch(setForcePasswordChange(false));
-                  setLoggedOn(true);
+                  onLogonResult('success');
                   break;
 
                case MSGTYPE_EXCHANGE_CHANGE_STATUS:
@@ -472,14 +470,17 @@ export function ProcessMessage(
          break;
 
          case ERROR_REPLY:
-         DispatchTableEvent(ADD_ROW, RESULTS_TABLE, {
-            [JSON_KEY_TIME]: GetFormattedTimestamp(),
-            [JSON_KEY_MESSAGE]:
-               `Error in seq ${json_message.in}, code: ` +
-               `${TranslateErrorMessage(Number(json_message.ec))} (${json_message.ec})`,
-            [JSON_KEY_RESULTS_TYPE]: RESULTS_TYPE_REPLY_ERROR,
-         });
-         ShowError(TranslateErrorMessage(json_message.ec), true);
+            DispatchTableEvent(ADD_ROW, RESULTS_TABLE, {
+               [JSON_KEY_TIME]: GetFormattedTimestamp(),
+               [JSON_KEY_MESSAGE]:
+                  `Error in seq ${json_message.in}, code: ` +
+                  `${TranslateErrorMessage(Number(json_message.ec))} (${json_message.ec})`,
+               [JSON_KEY_RESULTS_TYPE]: RESULTS_TYPE_REPLY_ERROR,
+            });
+            ShowError(TranslateErrorMessage(json_message.ec), true);
+            if (json_message.orig_m_type === MSGTYPE_TS_LOGON) {
+               onLogonResult('failed');
+            }
          break;
 
          default:

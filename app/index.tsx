@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 
-import { MSGTYPE_HEARTBEAT, MSGTYPE_TS_LOGON } from '../src/common/msg_types';
+import { MSGTYPE_HEARTBEAT, MSGTYPE_TS_LOGON, } from '../src/common/msg_types';
 import {
   JSON_KEY_BROWSER_SESSION_ID, JSON_KEY_IN_SEQ, JSON_KEY_MESSAGE_TYPE,
   JSON_KEY_PASSWORD, JSON_KEY_SUBMITTER, JSON_KEY_TEST_ID, JSON_KEY_USER,
@@ -193,15 +193,41 @@ export default function HomeScreen() {
     ws.onmessage = (event) => {
       try {
         const json = JSON.parse(event.data);
+
+        // Any error reply before login completes = logon failure.
+        // The server's error message has no orig_m_type, so we can't
+        // distinguish by request type — but during login there is
+        // nothing else an error could be about.
+        if (json.m_type === 999 && !loggedOn) {
+          setConnecting(false);
+          setStatus('Logon failed');
+          setAlertDialog({
+            title: 'Login Failed',
+            message: 'Wrong username or password. Please try again.',
+            variant: 'error',
+          });
+          return;
+        }
+
         const { isMarketController } = store.getState().globals;
         ProcessMessage(
           json,
           store.dispatch,
-          (v: boolean) => {
-            setLoggedOn(v);
-            if (v && allowBioPrompt && bioAvailable && !hasSavedCreds && !biometricPromptAnswered) {
-              biometricPromptAnswered = true;
-              setBioPrompt({ user, pass });
+          (outcome: 'success' | 'failed') => {
+            if (outcome === 'success') {
+              setLoggedOn(true);
+              if (allowBioPrompt && bioAvailable && !hasSavedCreds && !biometricPromptAnswered) {
+                biometricPromptAnswered = true;
+                setBioPrompt({ user, pass });
+              }
+            } else {
+              setConnecting(false);
+              setStatus('Logon failed');
+              setAlertDialog({
+                title: 'Login Failed',
+                message: 'Wrong username or password. Please try again.',
+                variant: 'error',
+              });
             }
           },
           user,

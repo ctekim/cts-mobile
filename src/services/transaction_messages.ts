@@ -140,12 +140,12 @@ export const HandleUserReply = (cmd: string, json_message: any, isMarketControll
         dispatch(setHoldingsRequest(HasPermission(perm, BIT_MASK_HOLDINGS_REQUEST)));
         dispatch(setUsersLoaded(true));
 
-        console.log(
-          '[permissions] ordersRequest:', HasPermission(perm, BIT_MASK_ORDER_REQUEST),
-          'tradesRequest:',  HasPermission(perm, BIT_MASK_TRADE_REQUEST),
-          'holdingsRequest:', HasPermission(perm, BIT_MASK_HOLDINGS_REQUEST),
-          'orderPair:',      HasPermission(perm, BIT_MASK_ORDER_PAIR)
-        );
+        // console.log(
+        //   '[permissions] ordersRequest:', HasPermission(perm, BIT_MASK_ORDER_REQUEST),
+        //   'tradesRequest:',  HasPermission(perm, BIT_MASK_TRADE_REQUEST),
+        //   'holdingsRequest:', HasPermission(perm, BIT_MASK_HOLDINGS_REQUEST),
+        //   'orderPair:',      HasPermission(perm, BIT_MASK_ORDER_PAIR)
+        // );
       }
       break;
     }
