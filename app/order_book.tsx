@@ -18,15 +18,22 @@ const EMPTY_ARRAY: any[] = [];
 
 type ViewMode = 'grouped' | 'orders';
 
-// Columns used by each view
-const GROUPED_COLUMNS = [
+// Buy: Qty on the left, Price on the right
+const BUY_COLUMNS = [
+  { key: 'qty',   label: 'Qty',   width: 100 },
+  { key: 'price', label: 'Price', width: 100 },
+];
+
+// Sell: Price on the left, Qty on the right
+const SELL_COLUMNS = [
   { key: 'price', label: 'Price', width: 100 },
   { key: 'qty',   label: 'Qty',   width: 100 },
 ];
 
+// By-Order view uses the same layout for both sides
 const ORDER_COLUMNS = [
-  { key: 'price',    label: 'Price',    width: 100 },
-  { key: 'qty',      label: 'Qty',      width: 100 },
+  { key: 'price', label: 'Price', width: 100 },
+  { key: 'qty',   label: 'Qty',   width: 100 },
 ];
 
 export default function OrderBookScreen() {
@@ -131,12 +138,17 @@ export default function OrderBookScreen() {
     return '';
   };
 
-  const activeColumns = view === 'grouped' ? GROUPED_COLUMNS : ORDER_COLUMNS;
+  // const activeColumns = view === 'grouped' ? GROUPED_COLUMNS : ORDER_COLUMNS;
 
   const renderSide = (rows: any[], side: 'buy' | 'sell') => {
     const sideColor = side === 'buy' ? DarkTheme.positive : DarkTheme.negative;
     const label = side === 'buy' ? 'BUY' : 'SELL';
 
+    const activeColumns =
+      view === 'grouped'
+        ? (side === 'buy' ? BUY_COLUMNS : SELL_COLUMNS)
+        : ORDER_COLUMNS;
+        
     return (
       <View style={styles.sideContainer}>
         <Text style={[styles.sideHeader, { color: sideColor }]}>
@@ -429,7 +441,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderRightWidth: 1,
   },
-  headerText: { fontWeight: 'bold', fontSize: 11 },
+  headerText: { fontWeight: 'bold', fontSize: 11, textAlign: 'center' },
 
   dataRow: { flexDirection: 'row', height: ROW_HEIGHT },
   dataCell: {
@@ -440,7 +452,7 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderBottomWidth: 1,
   },
-  num: { fontFamily: 'monospace', textAlign: 'right' },
+   num: { fontFamily: 'monospace', textAlign: 'center' },
 
   emptySmall: {
     textAlign: 'center',
