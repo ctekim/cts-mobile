@@ -61,6 +61,41 @@ export default function HomeScreen() {
   const router = useRouter();
   const forcePasswordChange = useAppSelector(selectForcePasswordChange);
 
+  const [showServerModal, setShowServerModal] = useState(false);
+  const [serverDraft, setServerDraft] = useState('');
+
+  const openServerModal = () => {
+    setServerDraft(transactionUrl);
+    setShowServerModal(true);
+  };
+
+  const saveServerUrl = async () => {
+    const trimmed = serverDraft.trim();
+    if (!/^wss?:\/\/.+/.test(trimmed)) {
+      Alert.alert('Invalid URL', 'Must start with ws:// or wss://');
+      return;
+    }
+    try {
+      await SecureStore.setItemAsync(SS_SERVER_URL, trimmed);
+      setTransactionUrl(trimmed);
+      setShowServerModal(false);
+      Alert.alert('Saved', 'Server URL updated.');
+    } catch (e) {
+      console.log('[login] save server url error', e);
+      Alert.alert('Error', 'Could not save server URL');
+    }
+  };
+
+  const resetServerUrl = async () => {
+    try {
+      await SecureStore.deleteItemAsync(SS_SERVER_URL);
+      setTransactionUrl(DEFAULT_TRANSACTION_URL);
+      setServerDraft(DEFAULT_TRANSACTION_URL);
+    } catch (e) {
+      console.log('[login] reset server url error', e);
+    }
+  };
+
   // ---------- init: biometric availability + saved creds + server url ----------
   useEffect(() => {
     (async () => {
@@ -320,6 +355,10 @@ export default function HomeScreen() {
               )}
             </TouchableOpacity>
 
+            <TouchableOpacity onPress={openServerModal} disabled={connecting}>
+              <Text style={styles.serverLink}>Change Server</Text>
+            </TouchableOpacity>
+
             <View style={styles.statusRow}>
               <View
                 style={[
@@ -347,6 +386,48 @@ export default function HomeScreen() {
       </KeyboardAvoidingView>
 
       {/* {__DEV__ && <DebugPanel />} */}
+      {showServerModal && (
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { backgroundColor: '#0f1726' }]}>
+            <Text style={styles.modalTitle}>Server URL</Text>
+            <Text style={styles.modalHint}>
+              The WebSocket address of the transaction server.
+            </Text>
+
+            <TextInput
+              style={styles.modalInput}
+              value={serverDraft}
+              onChangeText={setServerDraft}
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="ws://host:port"
+              placeholderTextColor="#6b7a90"
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: 'rgba(255,255,255,0.08)' }]}
+                onPress={() => setShowServerModal(false)}
+              >
+                <Text style={{ color: '#e8eef7', fontWeight: 'bold' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: 'rgba(255,255,255,0.08)' }]}
+                onPress={resetServerUrl}
+              >
+                <Text style={{ color: '#e8eef7', fontWeight: 'bold' }}>Reset</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: '#2f7dd1' }]}
+                onPress={saveServerUrl}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
     </ImageBackground>
   );
 }
@@ -476,5 +557,61 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#4b5568',
     letterSpacing: 0.6,
+  },
+
+  serverLink: {
+    marginTop: 14,
+    fontSize: 13,
+    color: '#6b7a90',
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 10,
+    padding: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#e8eef7',
+    marginBottom: 6,
+  },
+  modalHint: {
+    fontSize: 12,
+    color: '#8b98ad',
+    marginBottom: 12,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#e8eef7',
+    borderColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginTop: 16,
+  },
+  modalBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 6,
+    minWidth: 80,
+    alignItems: 'center',
   },
 });
