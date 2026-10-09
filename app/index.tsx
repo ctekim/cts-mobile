@@ -1,7 +1,7 @@
 // app/index.tsx
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, ImageBackground, KeyboardAvoidingView,
+  ActivityIndicator, ImageBackground, KeyboardAvoidingView,
   Platform, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -21,6 +21,7 @@ import { setTSUserId, setBSId, selectForcePasswordChange } from '../src/redux/gl
 // import { DebugPanel } from '../src/components/DebugPanel';
 import { setWs, setHeartbeat } from '../src/services/ws_state';
 import { useAppSelector } from '../src/redux/hooks';
+import { ConfirmDialog } from '../src/components/ConfirmDialog';
 
 const DEFAULT_TRANSACTION_URL = 'ws://192.168.56.100:9401';
 const HEARTBEAT_INTERVAL = 20000;
@@ -54,15 +55,26 @@ export default function HomeScreen() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // const bsidRef = useRef(
-  //   'mobile-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 10)
-  // );
   const bsidRef = useRef('');
   const router = useRouter();
   const forcePasswordChange = useAppSelector(selectForcePasswordChange);
 
+  // ---- server-url modal state ----
   const [showServerModal, setShowServerModal] = useState(false);
   const [serverDraft, setServerDraft] = useState('');
+
+  // ---- generic alert dialog (replaces Alert.alert) ----
+  const [alertDialog, setAlertDialog] = useState<{
+    title: string;
+    message: string;
+    variant?: 'default' | 'error';
+  } | null>(null);
+
+  // ---- biometric-enable prompt (replaces the two-button Alert.alert) ----
+  const [bioPrompt, setBioPrompt] = useState<{
+    user: string;
+    pass: string;
+  } | null>(null);
 
   const openServerModal = () => {
     setServerDraft(transactionUrl);
@@ -72,17 +84,25 @@ export default function HomeScreen() {
   const saveServerUrl = async () => {
     const trimmed = serverDraft.trim();
     if (!/^wss?:\/\/.+/.test(trimmed)) {
-      Alert.alert('Invalid URL', 'Must start with ws:// or wss://');
+      setAlertDialog({
+        title: 'Invalid URL',
+        message: 'Must start with ws:// or wss://',
+        variant: 'error',
+      });
       return;
     }
     try {
       await SecureStore.setItemAsync(SS_SERVER_URL, trimmed);
       setTransactionUrl(trimmed);
       setShowServerModal(false);
-      Alert.alert('Saved', 'Server URL updated.');
+      setAlertDialog({ title: 'Saved', message: 'Server URL updated.' });
     } catch (e) {
       console.log('[login] save server url error', e);
-      Alert.alert('Error', 'Could not save server URL');
+      setAlertDialog({
+        title: 'Error',
+        message: 'Could not save server URL',
+        variant: 'error',
+      });
     }
   };
 
@@ -106,11 +126,9 @@ export default function HomeScreen() {
 
         const savedUser = await SecureStore.getItemAsync(SS_USER);
         const savedPass = await SecureStore.getItemAsync(SS_PASS);
-        // console.log('[bio-check] hardware:', hasHardware, '| enrolled:', enrolled, '| savedUser:', !!savedUser, '| savedPass:', !!savedPass);
         setHasSavedCreds(!!savedUser && !!savedPass);
 
         const savedUrl = await SecureStore.getItemAsync(SS_SERVER_URL);
-        
         if (savedUrl) setTransactionUrl(savedUrl);
       } catch (e) {
         console.log('[login] init error', e);
@@ -130,14 +148,13 @@ export default function HomeScreen() {
 
   // ---------- core login (shared by manual + biometric) ----------
   function startLogin(user: string, pass: string, allowBioPrompt: boolean) {
-    bsidRef.current = `${user}-mobile`; 
+    bsidRef.current = `${user}-mobile`;
     store.dispatch(setTSUserId(user));
     store.dispatch(setBSId(bsidRef.current));
     setStatus('Connecting…');
     setConnecting(true);
 
     const ws = new WebSocket(transactionUrl);
-    bsidRef.current = `${user}-mobile`;
     wsRef.current = ws;
     setWs(ws);
 
@@ -182,29 +199,9 @@ export default function HomeScreen() {
           store.dispatch,
           (v: boolean) => {
             setLoggedOn(v);
-            // On successful login, offer to save credentials — but only once
-            // per app session, and only if the user hasn't already saved them.
             if (v && allowBioPrompt && bioAvailable && !hasSavedCreds && !biometricPromptAnswered) {
               biometricPromptAnswered = true;
-              Alert.alert(
-                'Enable Biometric Login',
-                'Save your credentials so you can sign in next time with Face ID / fingerprint?',
-                [
-                  { text: 'Not Now', style: 'cancel' },
-                  {
-                    text: 'Enable',
-                    onPress: async () => {
-                      try {
-                        await SecureStore.setItemAsync(SS_USER, user);
-                        await SecureStore.setItemAsync(SS_PASS, pass);
-                        setHasSavedCreds(true);
-                      } catch (e) {
-                        console.log('[biometric] save error', e);
-                      }
-                    },
-                  },
-                ]
-              );
+              setBioPrompt({ user, pass });
             }
           },
           user,
@@ -232,10 +229,13 @@ export default function HomeScreen() {
   // ---------- manual login button ----------
   function handleLogin() {
     if (!username || !password) {
-      Alert.alert('Login', 'Please enter User Id and Password');
+      setAlertDialog({
+        title: 'Login',
+        message: 'Please enter User Id and Password',
+        variant: 'error',
+      });
       return;
     }
-    // Prompt (if applicable) is deferred to post-login inside startLogin.
     startLogin(username, password, /* allowBioPrompt */ true);
   }
 
@@ -261,14 +261,17 @@ export default function HomeScreen() {
       setBioChecking(false);
 
       if (!savedUser || !savedPass) {
-        Alert.alert('Biometric', 'No saved credentials found. Please sign in manually.');
+        setAlertDialog({
+          title: 'Biometric',
+          message: 'No saved credentials found. Please sign in manually.',
+          variant: 'error',
+        });
         setHasSavedCreds(false);
         return;
       }
 
       setUsername(savedUser);
       setPassword(savedPass);
-      // Don't re-prompt for biometrics after a biometric login.
       startLogin(savedUser, savedPass, /* allowBioPrompt */ false);
     } catch (e) {
       console.log('[biometric] auth error', e);
@@ -385,7 +388,7 @@ export default function HomeScreen() {
         </View>
       </KeyboardAvoidingView>
 
-      {/* {__DEV__ && <DebugPanel />} */}
+      {/* ---------------- Server URL modal ---------------- */}
       {showServerModal && (
         <View style={styles.modalBackdrop}>
           <View style={[styles.modalCard, { backgroundColor: '#0f1726' }]}>
@@ -428,6 +431,45 @@ export default function HomeScreen() {
         </View>
       )}
 
+      {/* ---------------- Generic alert dialog ---------------- */}
+      {alertDialog && (
+        <ConfirmDialog
+          visible={true}
+          title={alertDialog.title}
+          message={alertDialog.message}
+          variant={alertDialog.variant ?? 'default'}
+          actions={[{ label: 'OK', style: 'default', onPress: () => {} }]}
+          onClose={() => setAlertDialog(null)}
+        />
+      )}
+
+      {/* ---------------- Biometric-enable prompt ---------------- */}
+      {bioPrompt && (
+        <ConfirmDialog
+          visible={true}
+          title="Enable Biometric Login"
+          message="Save your credentials so you can sign in next time with Face ID / fingerprint?"
+          variant="default"
+          accentColor="#2f7dd1"
+          actions={[
+            { label: 'Not Now', style: 'cancel', onPress: () => {} },
+            {
+              label: 'Enable',
+              style: 'success',
+              onPress: async () => {
+                try {
+                  await SecureStore.setItemAsync(SS_USER, bioPrompt.user);
+                  await SecureStore.setItemAsync(SS_PASS, bioPrompt.pass);
+                  setHasSavedCreds(true);
+                } catch (e) {
+                  console.log('[biometric] save error', e);
+                }
+              },
+            },
+          ]}
+          onClose={() => setBioPrompt(null)}
+        />
+      )}
     </ImageBackground>
   );
 }

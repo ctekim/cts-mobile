@@ -2,7 +2,7 @@
 import { useRef, useEffect, useMemo, useState } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
-  StyleSheet, NativeSyntheticEvent, NativeScrollEvent, Alert,
+  StyleSheet, NativeSyntheticEvent, NativeScrollEvent, 
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAppSelector } from '../../src/redux/hooks';
@@ -96,6 +96,11 @@ export default function OrdersScreen() {
   const [cancelTarget, setCancelTarget] = useState<any | null>(null);
   const sheetRef = useRef<BottomSheetModal>(null);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [alertDialog, setAlertDialog] = useState<{
+    title: string;
+    message: string;
+    variant?: 'default' | 'error';
+  } | null>(null);
 
   // ----- Group by o_num, keep all rows, mark which is the latest -----
   const grouped = useMemo(() => {
@@ -495,7 +500,11 @@ export default function OrdersScreen() {
               const isPairOrder = pairValue !== 0;
               const ok = sendCancelOrder(cancelTarget.o_num, isPairOrder);
               if (!ok) {
-                Alert.alert('Not connected');
+                setAlertDialog({
+                  title: 'Not Connected',
+                  message: 'The socket is not open. Try again.',
+                  variant: 'error',
+                });
               }
             },
           },
@@ -522,6 +531,17 @@ export default function OrdersScreen() {
           setCancelTarget(order);
         }}
       /><Fab onPress={() => router.push('/order_new')} />
+      
+      {alertDialog && (
+      <ConfirmDialog
+          visible={true}
+          title={alertDialog.title}
+          message={alertDialog.message}
+          variant={alertDialog.variant ?? 'default'}
+          actions={[{ label: 'OK', style: 'default', onPress: () => {} }]}
+          onClose={() => setAlertDialog(null)}
+        />
+      )}
     </View>
   );
 }

@@ -1,7 +1,7 @@
 // app/order_amend.tsx
 import { useState, useEffect, useMemo } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert,
+  View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
   Switch,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -10,6 +10,7 @@ import { selectTableData } from '../src/redux/globalsSlice';
 import { sendAmendOrder } from '../src/services/order_messages';
 import { DarkTheme } from '../src/common/theme';
 import { Picker } from '../src/components/Picker';
+import { ConfirmDialog } from '../src/components/ConfirmDialog';
 import {
   SESSION_OPTIONS,
   TRIGGER_CONDITION_OPTIONS,
@@ -75,13 +76,20 @@ export default function OrderAmendScreen() {
   const [qty, setQty] = useState('');
   const [visibleQty, setVisibleQty] = useState('');
   const [visibleBal, setVisibleBal] = useState('');
-  const [duration, setDuration] = useState<string>(DURATION_DAY);   // ← NEW
+  const [duration, setDuration] = useState<string>(DURATION_DAY);
   const [session, setSession] = useState('O');
   const [triggerCondition, setTriggerCondition] = useState('B');
   const [triggerPrice, setTriggerPrice] = useState('');
   const [triggerDuration, setTriggerDuration] = useState(DURATION_DAY);
   const [removeTrigger, setRemoveTrigger] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ---- alert dialog (replaces Alert. alert) ----
+  const [alertDialog, setAlertDialog] = useState<{
+    title: string;
+    message: string;
+    variant?: 'default' | 'error';
+  } | null>(null);
 
   // ---- Initialize ----
   useEffect(() => {
@@ -100,7 +108,7 @@ export default function OrderAmendScreen() {
     if (order.sess_t) setSession(String(order.sess_t));
     if (order.t_con) setTriggerCondition(String(order.t_con));
     if (order.t_dur) setTriggerDuration(String(order.t_dur));
-    setDuration(String(order.dur ?? DURATION_DAY));   // ← NEW
+    setDuration(String(order.dur ?? DURATION_DAY));
   }, [order, priceDec, qtyDec]);
 
   // ---- Submit ----
@@ -114,34 +122,34 @@ export default function OrderAmendScreen() {
     const trigPriceNum = Number(triggerPrice);
 
     if (isNaN(priceNum) || priceNum <= 0) {
-      Alert.alert('Invalid', 'Price must be greater than zero');
+      setAlertDialog({ title: 'Invalid', message: 'Price must be greater than zero', variant: 'error' });
       return;
     }
     if (isNaN(qtyNum) || qtyNum <= 0) {
-      Alert.alert('Invalid', 'Quantity must be greater than zero');
+      setAlertDialog({ title: 'Invalid', message: 'Quantity must be greater than zero', variant: 'error' });
       return;
     }
     if (isFOK && duration !== DURATION_IMMEDIATE) {
-      Alert.alert('Invalid', 'FOK orders must have duration Immediate');
+      setAlertDialog({ title: 'Invalid', message: 'FOK orders must have duration Immediate', variant: 'error' });
       return;
     }
     if (showVisibleFields) {
       if (isNaN(visQtyNum) || visQtyNum < 0) {
-        Alert.alert('Invalid', 'Visible qty is invalid');
+        setAlertDialog({ title: 'Invalid', message: 'Visible qty is invalid', variant: 'error' });
         return;
       }
       if (visQtyNum >= qtyNum) {
-        Alert.alert('Invalid', 'Visible qty must be less than qty');
+        setAlertDialog({ title: 'Invalid', message: 'Visible qty must be less than qty', variant: 'error' });
         return;
       }
       if (isNaN(visBalNum) || visBalNum < 0) {
-        Alert.alert('Invalid', 'Visible balance is invalid');
+        setAlertDialog({ title: 'Invalid', message: 'Visible balance is invalid', variant: 'error' });
         return;
       }
     }
     if (showTriggerFields && !removeTrigger) {
       if (isNaN(trigPriceNum) || trigPriceNum <= 0) {
-        Alert.alert('Invalid', 'Trigger price must be greater than zero');
+        setAlertDialog({ title: 'Invalid', message: 'Trigger price must be greater than zero', variant: 'error' });
         return;
       }
     }
@@ -155,7 +163,7 @@ export default function OrderAmendScreen() {
       oNum: Number(order.o_num),
       instr: String(order.instr ?? ''),
       trdacc: String(order.trdacc ?? ''),
-      duration: String(duration),                                  // ← was order.dur
+      duration: String(duration),
       orderType: String(order.o_type ?? ORDER_TYPE_LIMIT),
       price: Math.round(priceNum * Math.pow(10, priceDec)),
       origQty: Math.round(qtyNum * Math.pow(10, qtyDec)),
@@ -174,7 +182,7 @@ export default function OrderAmendScreen() {
     setIsSubmitting(false);
 
     if (!ok) {
-      Alert.alert('Not connected');
+      setAlertDialog({ title: 'Not Connected', message: 'The socket is not open. Try again.', variant: 'error' });
       return;
     }
     router.back();
@@ -210,7 +218,6 @@ export default function OrderAmendScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        {/* Read-only */}
         <ReadonlyRow label="Instrument" value={String(order.instr ?? '')} />
         <ReadonlyRow
           label="Side"
@@ -228,11 +235,9 @@ export default function OrderAmendScreen() {
 
         <View style={styles.divider} />
 
-        {/* Editable core fields */}
         <LabeledInput label="Price" value={price} onChangeText={setPrice} decimals={priceDec} />
         <LabeledInput label="Quantity" value={qty} onChangeText={setQty} decimals={qtyDec} />
 
-        {/* Duration — editable, unless FOK forces Immediate */}
         {isFOK ? (
           <ReadonlyRow label="Duration" value="Immediate (FOK)" />
         ) : (
@@ -244,7 +249,6 @@ export default function OrderAmendScreen() {
           />
         )}
 
-        {/* Hidden order visible fields */}
         {showVisibleFields && (
           <>
             <View style={styles.divider} />
@@ -259,7 +263,6 @@ export default function OrderAmendScreen() {
           </>
         )}
 
-        {/* Session field for scheduled unplaced orders */}
         {showSessionField && (
           <>
             <View style={styles.divider} />
@@ -273,7 +276,6 @@ export default function OrderAmendScreen() {
           </>
         )}
 
-        {/* Trigger fields for trigger unplaced orders */}
         {showTriggerFields && (
           <>
             <View style={styles.divider} />
@@ -318,7 +320,6 @@ export default function OrderAmendScreen() {
           </>
         )}
 
-        {/* Actions */}
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.button, { backgroundColor: DarkTheme.surface, borderColor: DarkTheme.cellBorder, borderWidth: 1 }]}
@@ -336,6 +337,18 @@ export default function OrderAmendScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* ---------------- Alert dialog ---------------- */}
+      {alertDialog && (
+        <ConfirmDialog
+          visible={true}
+          title={alertDialog.title}
+          message={alertDialog.message}
+          variant={alertDialog.variant ?? 'default'}
+          actions={[{ label: 'OK', style: 'default', onPress: () => {} }]}
+          onClose={() => setAlertDialog(null)}
+        />
+      )}
     </View>
   );
 }

@@ -187,7 +187,11 @@ export function ProcessMessage(
             HandleUserReply(cmd, json_message, isMarketController, dispatch);
             break;
          case MSGTYPE_FORCE_LOGOFF:
-            Alert.alert('Session', 'Server has logged you out!');
+            store.dispatch(showResult({
+               type: 'error',
+               message: 'Server has logged you out.',
+               time: GetFormattedTimestamp(),
+            }));
             closeTSConnection();
             break;
 

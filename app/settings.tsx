@@ -1,7 +1,7 @@
 // app/settings.tsx
 import { useEffect, useState } from 'react';
 import {
-  Alert, ScrollView, StyleSheet, Switch, Text, TextInput,
+  ScrollView, StyleSheet, Switch, Text, TextInput,
   TouchableOpacity, View, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -10,6 +10,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import Constants from 'expo-constants';
 
 import { DarkTheme } from '../src/common/theme';
+import { ConfirmDialog } from '../src/components/ConfirmDialog';
 
 const SS_USER = 'cts_bio_user';
 const SS_PASS = 'cts_bio_pass';
@@ -32,6 +33,13 @@ export default function SettingsScreen() {
   const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER_URL);
   const [serverUrlDraft, setServerUrlDraft] = useState(DEFAULT_SERVER_URL);
 
+  // ---- generic alert dialog (replaces Alert. alert) ----
+  const [alertDialog, setAlertDialog] = useState<{
+    title: string;
+    message: string;
+    variant?: 'default' | 'error';
+  } | null>(null);
+
   useEffect(() => {
     (async () => {
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
@@ -53,7 +61,6 @@ export default function SettingsScreen() {
   // ---- biometric ----
   const onToggleBiometric = (next: boolean) => {
     if (next) {
-      // can't enable without a password to save
       setPendingUsername('');
       setPendingPassword('');
       setShowPasswordPrompt(true);
@@ -81,26 +88,32 @@ export default function SettingsScreen() {
 
   const confirmPasswordPrompt = async () => {
     if (!pendingUsername.trim() || !pendingPassword) {
-      Alert.alert('Enable Biometric', 'Enter both username and password');
+      setAlertDialog({
+        title: 'Enable Biometric',
+        message: 'Enter both username and password',
+        variant: 'error',
+      });
       return;
     }
     setBioLoading(true);
     try {
-      // OPTION B: save without verification.
-      // TODO: (Option A) open a throwaway WS, send a logon, inspect the reply.
       await SecureStore.setItemAsync(SS_USER, pendingUsername.trim());
       await SecureStore.setItemAsync(SS_PASS, pendingPassword);
       setBioEnabled(true);
       setShowPasswordPrompt(false);
       setPendingPassword('');
       setPendingUsername('');
-      Alert.alert(
-        'Biometric Enabled',
-        'You can now sign in with Face ID / fingerprint.',
-      );
+      setAlertDialog({
+        title: 'Biometric Enabled',
+        message: 'You can now sign in with Face ID / fingerprint.',
+      });
     } catch (e) {
       console.log('[settings] enable biometric error', e);
-      Alert.alert('Error', 'Could not enable biometric login');
+      setAlertDialog({
+        title: 'Error',
+        message: 'Could not enable biometric login',
+        variant: 'error',
+      });
     } finally {
       setBioLoading(false);
     }
@@ -110,16 +123,27 @@ export default function SettingsScreen() {
   const saveServerUrl = async () => {
     const trimmed = serverUrlDraft.trim();
     if (!/^wss?:\/\/.+/.test(trimmed)) {
-      Alert.alert('Invalid URL', 'Must start with ws:// or wss://');
+      setAlertDialog({
+        title: 'Invalid URL',
+        message: 'Must start with ws:// or wss://',
+        variant: 'error',
+      });
       return;
     }
     try {
       await SecureStore.setItemAsync(SS_SERVER_URL, trimmed);
       setServerUrl(trimmed);
-      Alert.alert('Saved', 'Server URL updated. Takes effect on next login.');
+      setAlertDialog({
+        title: 'Saved',
+        message: 'Server URL updated. Takes effect on next login.',
+      });
     } catch (e) {
       console.log('[settings] save server url error', e);
-      Alert.alert('Error', 'Could not save server URL');
+      setAlertDialog({
+        title: 'Error',
+        message: 'Could not save server URL',
+        variant: 'error',
+      });
     }
   };
 
@@ -227,7 +251,7 @@ export default function SettingsScreen() {
 
       </ScrollView>
 
-      {/* Password prompt modal for enabling biometrics */}
+      {/* ---------- Password prompt modal for enabling biometrics ---------- */}
       {showPasswordPrompt && (
         <View style={styles.modalBackdrop}>
           <View style={[styles.modalCard, { backgroundColor: DarkTheme.surface }]}>
@@ -282,6 +306,18 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View>
+      )}
+
+      {/* ---------- Generic alert dialog ---------- */}
+      {alertDialog && (
+        <ConfirmDialog
+          visible={true}
+          title={alertDialog.title}
+          message={alertDialog.message}
+          variant={alertDialog.variant ?? 'default'}
+          actions={[{ label: 'OK', style: 'default', onPress: () => {} }]}
+          onClose={() => setAlertDialog(null)}
+        />
       )}
     </View>
   );
