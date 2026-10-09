@@ -9,6 +9,7 @@ import { selectTSConnected, selectTableData } from '../src/redux/globalsSlice';
 import { handleLogout } from '../src/services/logout';
 import { formatPrice, formatQty } from '../src/common/format';
 import { DarkTheme } from '../src/common/theme';
+import { Fab } from '../src/components/Fab';
 
 const ROW_HEIGHT = 30;
 const BUY_MARKET_PRICE = 99999999999;
@@ -343,6 +344,14 @@ export default function OrderBookScreen() {
           {renderSide(sellRows, 'sell')}
         </View>
       )}
+      <Fab
+        onPress={() =>
+          router.push({
+            pathname: '/order_new',
+            params: { instr: selectedInstr },
+          })
+        }
+      />
     </View>
   );
 }
