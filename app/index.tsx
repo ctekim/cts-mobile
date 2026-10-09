@@ -18,7 +18,7 @@ import { store } from '../src/redux/store';
 import { ProcessMessage } from '../src/services/process_message';
 import { registerCloseHandler } from '../src/services/ts_connection';
 import { setTSUserId, setBSId, selectForcePasswordChange } from '../src/redux/globalsSlice';
-import { DebugPanel } from '../src/components/DebugPanel';
+// import { DebugPanel } from '../src/components/DebugPanel';
 import { setWs, setHeartbeat } from '../src/services/ws_state';
 import { useAppSelector } from '../src/redux/hooks';
 
@@ -54,10 +54,10 @@ export default function HomeScreen() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const bsidRef = useRef(
-    'mobile-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 10)
-  );
-
+  // const bsidRef = useRef(
+  //   'mobile-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 10)
+  // );
+  const bsidRef = useRef('');
   const router = useRouter();
   const forcePasswordChange = useAppSelector(selectForcePasswordChange);
 
@@ -95,12 +95,14 @@ export default function HomeScreen() {
 
   // ---------- core login (shared by manual + biometric) ----------
   function startLogin(user: string, pass: string, allowBioPrompt: boolean) {
+    bsidRef.current = `${user}-mobile`; 
     store.dispatch(setTSUserId(user));
     store.dispatch(setBSId(bsidRef.current));
     setStatus('Connecting…');
     setConnecting(true);
 
     const ws = new WebSocket(transactionUrl);
+    bsidRef.current = `${user}-mobile`;
     wsRef.current = ws;
     setWs(ws);
 
@@ -344,7 +346,7 @@ export default function HomeScreen() {
         </View>
       </KeyboardAvoidingView>
 
-      {__DEV__ && <DebugPanel />}
+      {/* {__DEV__ && <DebugPanel />} */}
     </ImageBackground>
   );
 }
