@@ -29,6 +29,7 @@
           "imageWidth": 76
         }
       ],
+      "./plugins/withNetworkSecurityConfig",
       "expo-secure-store",
       "@react-native-community/datetimepicker"
     ],
