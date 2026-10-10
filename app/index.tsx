@@ -238,7 +238,8 @@ export default function HomeScreen() {
       }
     };
 
-    ws.onerror = () => {
+    ws.onerror = (e: any) => {
+      console.log('[WS ERROR]', JSON.stringify(e), '| message:', e?.message);
       setStatus('Connection error');
       setConnecting(false);
     };
