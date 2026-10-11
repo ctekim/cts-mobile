@@ -41,3 +41,7 @@ example
 # generated native folders
 /ios
 /android
+
+# cert must be included in EAS builds
+!certs/
+!certs/cts_ca.pem

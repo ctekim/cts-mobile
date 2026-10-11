@@ -12,7 +12,7 @@ const withNetworkSecurityConfig = (config) => {
       );
       fs.mkdirSync(rawDir, { recursive: true });
 
-      const srcCert = path.join(config.modRequest.projectRoot, 'certs', 'cts_ca.pem');
+      const srcCert = path.join(config.modRequest.projectRoot, 'certs', 'cts_ca.crt');
       const destCert = path.join(rawDir, 'cts_ca.pem');
       fs.copyFileSync(srcCert, destCert);
 
