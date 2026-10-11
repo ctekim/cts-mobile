@@ -29,7 +29,14 @@
           "imageWidth": 76
         }
       ],
-      "./plugins/withNetworkSecurityConfig",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
       "expo-secure-store",
       "@react-native-community/datetimepicker"
     ],
