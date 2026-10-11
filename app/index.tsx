@@ -23,7 +23,7 @@ import { setWs, setHeartbeat } from '../src/services/ws_state';
 import { useAppSelector } from '../src/redux/hooks';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
 
-const DEFAULT_TRANSACTION_URL = 'ws://192.168.56.100:9401';
+const DEFAULT_TRANSACTION_URL = 'wss://192.168.1.50/ws';
 const HEARTBEAT_INTERVAL = 20000;
 
 // SecureStore keys
