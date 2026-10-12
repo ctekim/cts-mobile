@@ -306,23 +306,6 @@ export default function IndicesScreen() {
               onPress: () => {},
             },
             {
-              label: 'Create New',
-              style: 'success',
-              onPress: () => {
-                setActionTarget(null);
-                router.push('/index_create');
-              },
-            },
-            {
-              label: 'Modify',
-              style: 'success',
-              onPress: () => {
-                const idx = actionTarget.idx;
-                setActionTarget(null);
-                router.push({ pathname: '/index_modify', params: { idx } });
-              },
-            },
-            {
               label:
                 String(actionTarget.status).toUpperCase() === STATUS_ACTIVE
                   ? 'Suspend'
@@ -345,6 +328,23 @@ export default function IndicesScreen() {
                   newStatus,
                   withdraw,
                 });
+              },
+            },
+            {
+              label: 'Create New',
+              style: 'success',
+              onPress: () => {
+                setActionTarget(null);
+                router.push('/index_create');
+              },
+            },
+            {
+              label: 'Modify',
+              style: 'success',
+              onPress: () => {
+                const idx = actionTarget.idx;
+                setActionTarget(null);
+                router.push({ pathname: '/index_modify', params: { idx } });
               },
             },
           ]}

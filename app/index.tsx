@@ -22,6 +22,7 @@ import { setTSUserId, setBSId, selectForcePasswordChange } from '../src/redux/gl
 import { setWs, setHeartbeat } from '../src/services/ws_state';
 import { useAppSelector } from '../src/redux/hooks';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
+import { AppState } from 'react-native';
 
 const DEFAULT_TRANSACTION_URL = 'wss://192.168.1.50/ws';
 const HEARTBEAT_INTERVAL = 20000;
@@ -62,6 +63,10 @@ export default function HomeScreen() {
   // ---- server-url modal state ----
   const [showServerModal, setShowServerModal] = useState(false);
   const [serverDraft, setServerDraft] = useState('');
+
+  // ---- reconnect
+  const appStateRef = useRef(AppState.currentState);
+  const lastCredsRef = useRef<{ user: string; pass: string } | null>(null);
 
   // ---- generic alert dialog (replaces Alert.alert) ----
   const [alertDialog, setAlertDialog] = useState<{
@@ -146,8 +151,53 @@ export default function HomeScreen() {
     }
   }, [loggedOn, forcePasswordChange, router]);
 
+  // Keep a ref to the latest startLogin so the AppState handler never goes stale.
+  const startLoginRef = useRef<typeof startLogin | null>(null);
+  useEffect(() => {
+    startLoginRef.current = startLogin;
+  });
+
+  // Reconnect when the app returns to the foreground.
+  // Android silently kills the socket while backgrounded — do not trust readyState.
+  useEffect(() => {
+    console.log('[app] registering AppState listener');
+    const sub = AppState.addEventListener('change', (next) => {
+      console.log('[app] AppState changed:', appStateRef.current, '→', next);
+      const prev = appStateRef.current;
+      appStateRef.current = next;
+
+      if (prev.match(/inactive|background/) && next === 'active') {
+        console.log('[app] returned to foreground');
+
+        const creds = lastCredsRef.current;
+        if (!creds) {
+          console.log('[app] no creds saved — skipping reconnect');
+          return;
+        }
+
+        const old = wsRef.current;
+        if (old) {
+          old.onclose = null;
+          old.onerror = null;
+          old.onmessage = null;
+          try { old.close(); } catch {}
+        }
+        if (heartbeatRef.current) {
+          clearInterval(heartbeatRef.current);
+          heartbeatRef.current = null;
+        }
+
+        console.log('[app] reconnecting as', creds.user);
+        startLoginRef.current?.(creds.user, creds.pass, false);
+      }
+    });
+
+    return () => sub.remove();
+  }, []);
+
   // ---------- core login (shared by manual + biometric) ----------
   function startLogin(user: string, pass: string, allowBioPrompt: boolean) {
+    lastCredsRef.current = { user, pass };   // <-- ADD THIS LINE
     bsidRef.current = `${user}-mobile`;
     store.dispatch(setTSUserId(user));
     store.dispatch(setBSId(bsidRef.current));
@@ -165,7 +215,35 @@ export default function HomeScreen() {
       setConnecting(false);
     });
 
+    let lastServerMsg = Date.now();
+
+    // Mark the time whenever the server sends us anything.
+    // (Uses a local closure so we don't touch ws.onmessage elsewhere.)
+    ws.addEventListener('message', () => { lastServerMsg = Date.now(); });
+
     heartbeatRef.current = setInterval(() => {
+      const silence = Date.now() - lastServerMsg;
+
+      // If the server hasn't said anything in 3 heartbeat intervals,
+      // assume the socket is a zombie and force a reconnect.
+      if (silence > HEARTBEAT_INTERVAL * 3) {
+        console.log('[HB] server silent', silence, 'ms — forcing reconnect');
+        const old = wsRef.current;
+        if (old) {
+          old.onclose = null;
+          old.onerror = null;
+          old.onmessage = null;
+          try { old.close(); } catch {}
+        }
+        if (heartbeatRef.current) {
+          clearInterval(heartbeatRef.current);
+          heartbeatRef.current = null;
+        }
+        const creds = lastCredsRef.current;
+        if (creds) startLogin(creds.user, creds.pass, false);
+        return;
+      }
+
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
           [JSON_KEY_USER]: user,
