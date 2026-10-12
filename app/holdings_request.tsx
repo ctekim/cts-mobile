@@ -84,11 +84,11 @@ export default function HoldingsRequestScreen() {
 
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Picker
-          label="Trade Account"
+          label="Account"
           value={tradingAccount}
           options={tradingAccountOptions}
           onChange={setTradingAccount}
-          placeholder="Select Trade Account"
+          placeholder="Select Account"
         />
 
         <Picker

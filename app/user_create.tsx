@@ -216,7 +216,7 @@ const [confirmPassword, setConfirmPassword] = useState('password');
         />
 
         <YesNoChips
-          label="Check Pointer"
+          label="CheckPoint"
           value={checkpointer}
           onChange={setCheckpointer}
           disabled={!isServerRole}

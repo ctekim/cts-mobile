@@ -324,24 +324,6 @@ export default function InstrumentsScreen() {
                         onPress: () => {},
                      },
                      {
-                        label: 'Cancel All Orders',
-                        style: 'destructive',
-                        onPress: () => {
-                           const code = actionTarget.code;
-                           setActionTarget(null);
-                           setPendingAction({ kind: 'cancelAll', instrument: code });
-                        },
-                     },
-                     {
-                        label: 'Trade Entry',
-                        style: 'success',
-                        onPress: () => {
-                           const code = actionTarget.code;
-                           setActionTarget(null);
-                           router.push({ pathname: '/trade_entry', params: { instr: code } });
-                        },
-                     },
-                     {
                         label:
                            String(actionTarget.status).toUpperCase() === STATUS_ACTIVE
                               ? 'Suspend'
@@ -364,6 +346,24 @@ export default function InstrumentsScreen() {
                               newStatus,
                               withdraw,
                            });
+                        },
+                     },
+                     {
+                        label: 'Cancel All Orders',
+                        style: 'destructive',
+                        onPress: () => {
+                           const code = actionTarget.code;
+                           setActionTarget(null);
+                           setPendingAction({ kind: 'cancelAll', instrument: code });
+                        },
+                     },
+                     {
+                        label: 'Trade Entry',
+                        style: 'success',
+                        onPress: () => {
+                           const code = actionTarget.code;
+                           setActionTarget(null);
+                           router.push({ pathname: '/trade_entry', params: { instr: code } });
                         },
                      },
                   ]}
