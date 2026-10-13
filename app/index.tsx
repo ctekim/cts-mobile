@@ -40,6 +40,7 @@ let biometricPromptAnswered = false;
 const BG_IMAGE = require('../assets/images/login-bg.jpg');
 
 export default function HomeScreen() {
+  console.log('[render] HomeScreen body running');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState('Disconnected');
@@ -67,6 +68,8 @@ export default function HomeScreen() {
   // ---- reconnect
   const appStateRef = useRef(AppState.currentState);
   const lastCredsRef = useRef<{ user: string; pass: string } | null>(null);
+  const reconnectingRef = useRef(false);
+  const lastReconnectRef = useRef(0);
 
   // ---- generic alert dialog (replaces Alert.alert) ----
   const [alertDialog, setAlertDialog] = useState<{
@@ -169,11 +172,34 @@ export default function HomeScreen() {
       if (prev.match(/inactive|background/) && next === 'active') {
         console.log('[app] returned to foreground');
 
+        // --- Guard 1: don't reconnect if we're already doing it
+        if (reconnectingRef.current) {
+          console.log('[app] already reconnecting — skip');
+          return;
+        }
+
+        // --- Guard 2: don't reconnect more than once every 5 seconds
+        const now = Date.now();
+        if (now - lastReconnectRef.current < 5000) {
+          console.log('[app] reconnect debounced — skip');
+          return;
+        }
+
+        // --- Guard 3: don't reconnect if the socket is actually healthy
+        const ws = wsRef.current;
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          console.log('[app] socket still open — no reconnect needed');
+          return;
+        }
+
         const creds = lastCredsRef.current;
         if (!creds) {
           console.log('[app] no creds saved — skipping reconnect');
           return;
         }
+
+        reconnectingRef.current = true;
+        lastReconnectRef.current = now;
 
         const old = wsRef.current;
         if (old) {
@@ -189,14 +215,37 @@ export default function HomeScreen() {
 
         console.log('[app] reconnecting as', creds.user);
         startLoginRef.current?.(creds.user, creds.pass, false);
+
+        // Clear the flag after the reconnect has had a moment to start
+        setTimeout(() => { reconnectingRef.current = false; }, 3000);
       }
     });
 
-    return () => sub.remove();
+    return () => {
+      console.log('[app] AppState listener REMOVED');
+      sub.remove();
+    };
   }, []);
 
   // ---------- core login (shared by manual + biometric) ----------
-  function startLogin(user: string, pass: string, allowBioPrompt: boolean) {
+   function startLogin(user: string, pass: string, allowBioPrompt: boolean) {
+    // Hard guard: if a socket is already open or opening, close it first.
+    const existing = wsRef.current;
+    if (existing && (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)) {
+      console.log('[WS] closing existing socket before new login');
+      existing.onclose = null;
+      existing.onerror = null;
+      existing.onmessage = null;
+      try { existing.close(); } catch {}
+    }
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+    }
+
+    lastCredsRef.current = { user, pass };
+    bsidRef.current = `${user}-mobile`;
+    console.log('[WS] startLogin for', user, 'url:', transactionUrl);
     lastCredsRef.current = { user, pass };   // <-- ADD THIS LINE
     bsidRef.current = `${user}-mobile`;
     store.dispatch(setTSUserId(user));
@@ -222,6 +271,7 @@ export default function HomeScreen() {
     ws.addEventListener('message', () => { lastServerMsg = Date.now(); });
 
     heartbeatRef.current = setInterval(() => {
+      console.log('[HB] tick, readyState =', ws.readyState, 'silence =', Date.now() - lastServerMsg);
       const silence = Date.now() - lastServerMsg;
 
       // If the server hasn't said anything in 3 heartbeat intervals,
@@ -257,6 +307,7 @@ export default function HomeScreen() {
     setHeartbeat(heartbeatRef.current);
 
     ws.onopen = () => {
+      console.log('[WS] onopen — sending logon');
       setStatus('Authenticating…');
       ws.send(JSON.stringify({
         [JSON_KEY_MESSAGE_TYPE]: MSGTYPE_TS_LOGON,
@@ -324,6 +375,7 @@ export default function HomeScreen() {
 
     ws.onclose = (e: CloseEvent) => {
       console.log('[WS CLOSED]', e.code, e.reason, 'wasClean:', e.wasClean);
+      console.log('[WS] onclose — code:', e.code, 'reason:', e.reason);
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       setStatus('Disconnected');
       setConnecting(false);
