@@ -49,7 +49,7 @@ let biometricPromptAnswered = false;
 const BG_IMAGE = require('../assets/images/login-bg.jpg');
 
 export default function HomeScreen() {
-  console.log('[render] HomeScreen body running');
+  // console.log('[render] HomeScreen body running');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState('Disconnected');

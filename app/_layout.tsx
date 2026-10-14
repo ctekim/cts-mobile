@@ -55,11 +55,13 @@ export default function RootLayout() {
         handleAppForeground();
       }
     });
-    const iv = setInterval(() => {
-      if (AppState.currentState === 'active') {
-        console.log('[app-root] state check; current state:', AppState.currentState);
-      }
-    }, 5000);
+    
+    // const iv = setInterval(() => {
+    //   if (AppState.currentState === 'active') {
+    //     console.log('[app-root] state check; current state:', AppState.currentState);
+    //   }
+    // }, 5000);
+
     return () => { sub.remove(); clearInterval(iv); };
   }, []);
 
@@ -71,7 +73,7 @@ export default function RootLayout() {
             <View style={{ flex: 1 }}>
               <Stack screenOptions={{ headerShown: false }} />
               <ResultToast />
-
+              { /*
               <View style={styles.debugOverlay} pointerEvents="none">
                 <Text style={styles.debugTitle}>__logs ({lines.length})</Text>
                 <ScrollView>
@@ -80,6 +82,7 @@ export default function RootLayout() {
                   ))}
                 </ScrollView>
               </View>
+              */}
             </View>
           </ThemeProvider>
         </BottomSheetModalProvider>
