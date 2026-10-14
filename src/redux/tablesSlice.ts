@@ -104,20 +104,33 @@ const tablesSlice = createSlice({
         state.tables[table].push(row);
       }
     },
+    // updateRow: (state, action: PayloadAction<{ table: string; row: any }>) => {
+    //   const { table, row } = action.payload;
+    //   if (!state.tables[table]) {
+    //     state.tables[table] = [row];
+    //     return;
+    //   }
+
+    //   const idx = state.tables[table].findIndex((r) => rowMatches(r, row, table));
+
+    //   if (idx >= 0) {
+    //     state.tables[table][idx] = { ...state.tables[table][idx], ...row };
+    //   } else {
+    //     // Update for a row we don't have — treat as an add
+    //     state.tables[table].push(row);
+    //   }
+    // },
     updateRow: (state, action: PayloadAction<{ table: string; row: any }>) => {
       const { table, row } = action.payload;
-      if (!state.tables[table]) {
-        state.tables[table] = [row];
-        return;
-      }
+
+      // If the table doesn't exist yet, there is nothing to update.
+      if (!state.tables[table]) return;
 
       const idx = state.tables[table].findIndex((r) => rowMatches(r, row, table));
 
+      // Only update if the row already exists. If it doesn't, do nothing.
       if (idx >= 0) {
         state.tables[table][idx] = { ...state.tables[table][idx], ...row };
-      } else {
-        // Update for a row we don't have — treat as an add
-        state.tables[table].push(row);
       }
     },
 
