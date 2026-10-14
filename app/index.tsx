@@ -44,6 +44,7 @@ const SS_SERVER_URL = 'cts_server_url';
 // Survives for the lifetime of the JS process.
 // Resets on cold start — so a fresh app launch will prompt once.
 let biometricPromptAnswered = false;
+let loginInProgress = false;
 
 // Background image you added
 const BG_IMAGE = require('../assets/images/login-bg.jpg');
@@ -224,7 +225,13 @@ export default function HomeScreen() {
   }, []);
 
   // ---------- core login (shared by manual + biometric) ----------
-   function startLogin(user: string, pass: string, allowBioPrompt: boolean) {
+  function startLogin(user: string, pass: string, allowBioPrompt: boolean) {
+    if (loginInProgress) {
+      console.log('[WS] startLogin already in progress — ignoring duplicate call');
+      return;
+    }
+    loginInProgress = true;
+
     // Hard guard: if a socket is already open or opening, close it first.
     const existing = wsRef.current;
     if (existing && (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)) {
@@ -284,7 +291,8 @@ export default function HomeScreen() {
     setHeartbeat(heartbeatRef.current);
 
     ws.onopen = () => {
-      console.log('[WS] onopen — sending logon');
+      // console.log('[WS] onopen — sending logon');
+      loginInProgress = false;
       setStatus('Authenticating…');
       ws.send(JSON.stringify({
         [JSON_KEY_MESSAGE_TYPE]: MSGTYPE_TS_LOGON,
@@ -347,6 +355,7 @@ export default function HomeScreen() {
 
     ws.onerror = (e: any) => {
       console.log('[WS ERROR]', JSON.stringify(e), '| message:', e?.message);
+      loginInProgress = false;
       setStatus('Connection error');
       setConnecting(false);
     };
@@ -354,6 +363,7 @@ export default function HomeScreen() {
     ws.onclose = (e: CloseEvent) => {
       console.log('[WS CLOSED]', e.code, e.reason, 'wasClean:', e.wasClean);
       console.log('[WS] onclose — code:', e.code, 'reason:', e.reason);
+      loginInProgress = false;
       stopBackgroundService();
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       setStatus('Disconnected');

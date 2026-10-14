@@ -46,7 +46,7 @@ export default function RootLayout() {
   // AppState diagnostics
   useEffect(() => {
     SplashScreen.hideAsync();
-    console.log('[app-root] registering AppState listener');
+    // console.log('[app-root] registering AppState listener');
     const sub = AppState.addEventListener('change', (next) => {
       console.log('[app-root] AppState changed:', next);
 
@@ -62,7 +62,9 @@ export default function RootLayout() {
     //   }
     // }, 5000);
 
-    return () => { sub.remove(); clearInterval(iv); };
+    // return () => { sub.remove(); clearInterval(iv); };
+
+    return () => { sub.remove(); };
   }, []);
 
   return (
