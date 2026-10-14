@@ -1,17 +1,34 @@
-// src/services/ws_state.ts
 
 let ws: WebSocket | null = null;
 let heartbeat: ReturnType<typeof setInterval> | null = null;
+let lastServerMessageAt = 0;
 
 export function setWs(socket: WebSocket | null) {
   ws = socket;
+  lastServerMessageAt = 0;
 }
 
 export function getWs(): WebSocket | null {
   return ws;
 }
 
-export function setHeartbeat(h: ReturnType<typeof setInterval> | null) {
+export function markServerMessageReceived() {
+  lastServerMessageAt = Date.now();
+}
+
+export function isSocketStale(maxSilenceMs: number): boolean {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    return true;
+  }
+
+  if (lastServerMessageAt === 0) {
+    return false;
+  }
+
+  return Date.now() - lastServerMessageAt > maxSilenceMs;
+}
+
+export function setHeartbeat(h: ReturnType<typeof setInterval>) {
   heartbeat = h;
 }
 
@@ -24,8 +41,18 @@ export function clearHeartbeat() {
 
 export function closeSocket() {
   clearHeartbeat();
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.close();
+
+  if (ws) {
+    const old = ws;
+    ws = null;
+
+    if (
+      old.readyState === WebSocket.OPEN ||
+      old.readyState === WebSocket.CONNECTING
+    ) {
+      old.close();
+    }
   }
-  ws = null;
+
+  lastServerMessageAt = 0;
 }

@@ -16,13 +16,22 @@ import {
 
 import { store } from '../src/redux/store';
 import { ProcessMessage } from '../src/services/process_message';
-import { registerCloseHandler } from '../src/services/ts_connection';
+import {
+  registerCloseHandler,
+  registerForegroundHandler,
+} from '../src/services/ts_connection';
 import { setTSUserId, setBSId, selectForcePasswordChange } from '../src/redux/globalsSlice';
-// import { DebugPanel } from '../src/components/DebugPanel';
-import { setWs, setHeartbeat } from '../src/services/ws_state';
+import {
+  setWs,
+  setHeartbeat,
+  getWs,
+  isSocketStale,
+  markServerMessageReceived,
+} from '../src/services/ws_state';
 import { useAppSelector } from '../src/redux/hooks';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
 import { AppState } from 'react-native';
+import { startBackgroundService, stopBackgroundService } from '../src/services/background_service';
 
 const DEFAULT_TRANSACTION_URL = 'wss://192.168.1.50/ws';
 const HEARTBEAT_INTERVAL = 20000;
@@ -160,71 +169,58 @@ export default function HomeScreen() {
     startLoginRef.current = startLogin;
   });
 
-  // Reconnect when the app returns to the foreground.
-  // Android silently kills the socket while backgrounded — do not trust readyState.
   useEffect(() => {
-    console.log('[app] registering AppState listener');
-    const sub = AppState.addEventListener('change', (next) => {
-      console.log('[app] AppState changed:', appStateRef.current, '→', next);
-      const prev = appStateRef.current;
-      appStateRef.current = next;
+    registerForegroundHandler(() => {
+      console.log('[app] foreground reconnect check');
 
-      if (prev.match(/inactive|background/) && next === 'active') {
-        console.log('[app] returned to foreground');
+      const creds = lastCredsRef.current;
 
-        // --- Guard 1: don't reconnect if we're already doing it
-        if (reconnectingRef.current) {
-          console.log('[app] already reconnecting — skip');
-          return;
-        }
+      if (!creds) {
+        console.log('[app] no previous login — skipping reconnect');
+        return;
+      }
 
-        // --- Guard 2: don't reconnect more than once every 5 seconds
-        const now = Date.now();
-        if (now - lastReconnectRef.current < 5000) {
-          console.log('[app] reconnect debounced — skip');
-          return;
-        }
+      if (reconnectingRef.current) {
+        console.log('[app] reconnect already running — skipping');
+        return;
+      }
 
-        // --- Guard 3: don't reconnect if the socket is actually healthy
-        const ws = wsRef.current;
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          console.log('[app] socket still open — no reconnect needed');
-          return;
-        }
+      const now = Date.now();
 
-        const creds = lastCredsRef.current;
-        if (!creds) {
-          console.log('[app] no creds saved — skipping reconnect');
-          return;
-        }
+      if (now - lastReconnectRef.current < 5000) {
+        console.log('[app] reconnect debounced — skipping');
+        return;
+      }
 
-        reconnectingRef.current = true;
-        lastReconnectRef.current = now;
+      const ws = getWs();
 
-        const old = wsRef.current;
-        if (old) {
-          old.onclose = null;
-          old.onerror = null;
-          old.onmessage = null;
-          try { old.close(); } catch {}
-        }
-        if (heartbeatRef.current) {
-          clearInterval(heartbeatRef.current);
-          heartbeatRef.current = null;
-        }
+      if (ws?.readyState === WebSocket.OPEN) {
+        console.log('[app] socket is open — keep existing session');
+        return;
+      }
 
-        console.log('[app] reconnecting as', creds.user);
-        startLoginRef.current?.(creds.user, creds.pass, false);
+      if (ws?.readyState === WebSocket.CONNECTING) {
+        console.log('[app] socket is connecting — do not start another login');
+        return;
+      }
 
-        // Clear the flag after the reconnect has had a moment to start
-        setTimeout(() => { reconnectingRef.current = false; }, 3000);
+      console.log('[app] socket is closed or unavailable — starting new login');
+
+      reconnectingRef.current = true;
+      lastReconnectRef.current = now;
+
+      try {
+        startLoginRef.current?.(
+          creds.user,
+          creds.pass,
+          false
+        );
+      } finally {
+        setTimeout(() => {
+          reconnectingRef.current = false;
+        }, 5000);
       }
     });
-
-    return () => {
-      console.log('[app] AppState listener REMOVED');
-      sub.remove();
-    };
   }, []);
 
   // ---------- core login (shared by manual + biometric) ----------
@@ -246,8 +242,6 @@ export default function HomeScreen() {
     lastCredsRef.current = { user, pass };
     bsidRef.current = `${user}-mobile`;
     console.log('[WS] startLogin for', user, 'url:', transactionUrl);
-    lastCredsRef.current = { user, pass };   // <-- ADD THIS LINE
-    bsidRef.current = `${user}-mobile`;
     store.dispatch(setTSUserId(user));
     store.dispatch(setBSId(bsidRef.current));
     setStatus('Connecting…');
@@ -268,31 +262,14 @@ export default function HomeScreen() {
 
     // Mark the time whenever the server sends us anything.
     // (Uses a local closure so we don't touch ws.onmessage elsewhere.)
-    ws.addEventListener('message', () => { lastServerMsg = Date.now(); });
+    // ws.addEventListener('message', () => { lastServerMsg = Date.now(); });
+    ws.addEventListener('message', () => {
+      lastServerMsg = Date.now();
+      markServerMessageReceived();
+    });
 
     heartbeatRef.current = setInterval(() => {
       console.log('[HB] tick, readyState =', ws.readyState, 'silence =', Date.now() - lastServerMsg);
-      const silence = Date.now() - lastServerMsg;
-
-      // If the server hasn't said anything in 3 heartbeat intervals,
-      // assume the socket is a zombie and force a reconnect.
-      if (silence > HEARTBEAT_INTERVAL * 3) {
-        console.log('[HB] server silent', silence, 'ms — forcing reconnect');
-        const old = wsRef.current;
-        if (old) {
-          old.onclose = null;
-          old.onerror = null;
-          old.onmessage = null;
-          try { old.close(); } catch {}
-        }
-        if (heartbeatRef.current) {
-          clearInterval(heartbeatRef.current);
-          heartbeatRef.current = null;
-        }
-        const creds = lastCredsRef.current;
-        if (creds) startLogin(creds.user, creds.pass, false);
-        return;
-      }
 
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
@@ -345,6 +322,7 @@ export default function HomeScreen() {
           (outcome: 'success' | 'failed') => {
             if (outcome === 'success') {
               setLoggedOn(true);
+              startBackgroundService();
               if (allowBioPrompt && bioAvailable && !hasSavedCreds && !biometricPromptAnswered) {
                 biometricPromptAnswered = true;
                 setBioPrompt({ user, pass });
@@ -376,6 +354,7 @@ export default function HomeScreen() {
     ws.onclose = (e: CloseEvent) => {
       console.log('[WS CLOSED]', e.code, e.reason, 'wasClean:', e.wasClean);
       console.log('[WS] onclose — code:', e.code, 'reason:', e.reason);
+      stopBackgroundService();
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       setStatus('Disconnected');
       setConnecting(false);

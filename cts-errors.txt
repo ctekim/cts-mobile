@@ -1,0 +1,5 @@
+10-13 22:02:29.109 I/ReactNativeJS(30078): '[WS] startLogin for', 'GST1', 'url:', 'wss://192.168.1.50/ws'
+10-13 22:02:31.939 I/ReactNativeJS(30078): [WS] onopen GÇö sending logon
+10-13 22:03:00.686 I/ReactNativeJS(30078): '[WS ERROR]', '{"_defaultPrevented":false,"_type":"error","_bubbles":false,"_cancelable":false,"_composed":false,"_timeStamp":3603616.7804}', '| message:', undefined
+10-13 22:03:00.690 I/ReactNativeJS(30078): '[WS CLOSED]', 1006, 'Software caused connection abort', 'wasClean:', false
+10-13 22:05:08.130 W/ReactNativeJS(30078): Error: undefined
