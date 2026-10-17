@@ -5,6 +5,7 @@ import { useAppSelector } from '../../src/redux/hooks';
 import { handleLogout } from '../../src/services/logout';
 import { DarkTheme } from '../../src/common/theme';
 import { selectIsMarketController } from '../../src/redux/globalsSlice';
+import { confirmLogout } from '../../src/services/logout_coordinator';
 
 export default function MoreScreen() {
   const router = useRouter();
@@ -39,7 +40,9 @@ export default function MoreScreen() {
     (s: any) => s.tables.tables.IndexMembersTable?.length ?? 0
   );
 
-  const onLogoutPress = () => {
+  const onLogoutPress = async () => {
+    const ok = await confirmLogout();
+    if (!ok) return;
     handleLogout();
     router.replace('/');
   };

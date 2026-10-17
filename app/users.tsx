@@ -30,6 +30,7 @@ import {
   ROLE_TRANSACTION_SERVER,
   ROLE_ALL_IN_ONE_SERVER,
 } from '../src/common/common';
+import { confirmLogout } from '../src/services/logout_coordinator';
 
 const CODE_WIDTH = 100;
 const ROW_HEIGHT = 36;
@@ -115,10 +116,12 @@ export default function UsersScreen() {
     else if (!isSuperUser) router.replace('/(tabs)/more');
   }, [connected, isSuperUser, router]);
 
-  const onLogout = () => {
-    handleLogout();
-    router.replace('/');
-  };
+   const onLogout = async () => {
+      const ok = await confirmLogout();
+      if (!ok) return;
+      handleLogout();
+      router.replace('/');
+   };
 
   const handleDataVerticalScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     leftListRef.current?.scrollToOffset({

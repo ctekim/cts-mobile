@@ -13,6 +13,7 @@ import {
   convertSeverity,
   severityKey,
 } from '../../src/common/notification_constants';
+import { confirmLogout } from '../../src/services/logout_coordinator';
 
 const ID_WIDTH = 60;
 const ROW_HEIGHT = 44;
@@ -46,10 +47,12 @@ export default function NotificationsScreen() {
     if (!connected) router.replace('/');
   }, [connected, router]);
 
-  const onLogout = () => {
-    handleLogout();
-    router.replace('/');
-  };
+   const onLogout = async () => {
+      const ok = await confirmLogout();
+      if (!ok) return;
+      handleLogout();
+      router.replace('/');
+   };
 
   const handleDataVerticalScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     leftListRef.current?.scrollToOffset({
@@ -165,6 +168,12 @@ export default function NotificationsScreen() {
           Notifications ({notifications.length})
         </Text>
         <View style={{ width: 60 }} />
+        <TouchableOpacity
+          style={[styles.logoutBtn, { backgroundColor: DarkTheme.danger }]}
+          onPress={onLogout}
+        >
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={[styles.headerRow, { backgroundColor: DarkTheme.headerBg }]}>
@@ -341,6 +350,8 @@ const styles = StyleSheet.create({
   toolbarTitle: { fontSize: 18, fontWeight: 'bold' },
   backBtn: { paddingVertical: 6, paddingHorizontal: 4, width: 60 },
   backText: { fontSize: 16, fontWeight: 'bold' },
+  logoutBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 },
+  logoutText: { color: '#fff', fontWeight: 'bold' },
 
   headerRow: { flexDirection: 'row', height: ROW_HEIGHT },
   headerScroll: { flex: 1 },

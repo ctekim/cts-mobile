@@ -9,6 +9,10 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { store } from '../src/redux/store';
 import { ResultToast } from '../src/components/ResultToast';
 import { handleAppForeground } from '../src/services/ts_connection';
+import { useRouter } from 'expo-router';
+import { ConfirmDialog } from '../src/components/ConfirmDialog';
+import { installLogoutDialog } from '../src/services/logout_coordinator';
+import { handleLogout } from '../src/services/logout';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -16,6 +20,14 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [lines, setLines] = useState<string[]>([]);
   const bufRef = useRef<string[]>([]);
+  const router = useRouter();
+  const [logoutPrompt, setLogoutPrompt] = useState<null | ((ok: boolean) => void)>(null);
+
+  useEffect(() => {
+    installLogoutDialog((onResolve) => {
+      setLogoutPrompt(() => onResolve);
+    });
+  }, []);
 
   // Capture logs by patching console.log ONCE, and push into React state.
   useEffect(() => {
@@ -75,16 +87,38 @@ export default function RootLayout() {
             <View style={{ flex: 1 }}>
               <Stack screenOptions={{ headerShown: false }} />
               <ResultToast />
-              { /*
-              <View style={styles.debugOverlay} pointerEvents="none">
-                <Text style={styles.debugTitle}>__logs ({lines.length})</Text>
-                <ScrollView>
-                  {lines.slice(-10).map((l, i) => (
-                    <Text key={i} style={styles.debugText}>{l}</Text>
-                  ))}
-                </ScrollView>
-              </View>
-              */}
+
+              <ConfirmDialog
+                visible={logoutPrompt !== null}
+                title="Log Out"
+                message="Are you sure you want to log out?"
+                variant="default"
+                actions={[
+                  {
+                    label: 'Cancel',
+                    style: 'cancel',
+                    onPress: () => {
+                      const cb = logoutPrompt;
+                      setLogoutPrompt(null);
+                      cb?.(false);
+                    },
+                  },
+                  {
+                    label: 'Log Out',
+                    style: 'destructive',
+                    onPress: () => {
+                      const cb = logoutPrompt;
+                      setLogoutPrompt(null);
+                      cb?.(true);
+                    },
+                  },
+                ]}
+                onClose={() => {
+                  const cb = logoutPrompt;
+                  setLogoutPrompt(null);
+                  cb?.(false);
+                }}
+              />
             </View>
           </ThemeProvider>
         </BottomSheetModalProvider>

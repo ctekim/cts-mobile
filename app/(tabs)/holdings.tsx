@@ -16,6 +16,7 @@ import { handleLogout } from '../../src/services/logout';
 import { formatQty, formatStatus } from '../../src/common/format';
 import { DarkTheme } from '../../src/common/theme';
 import { ConfirmDialog } from '../../src/components/ConfirmDialog';
+import { confirmLogout } from '../../src/services/logout_coordinator';
 
 const CODE_WIDTH = 140;
 const ROW_HEIGHT = 36;
@@ -65,10 +66,12 @@ export default function HoldingsScreen() {
     if (!connected) router.replace('/');
   }, [connected, router]);
 
-  const onLogout = () => {
-    handleLogout();
-    router.replace('/');
-  };
+   const onLogout = async () => {
+      const ok = await confirmLogout();
+      if (!ok) return;
+      handleLogout();
+      router.replace('/');
+   };
 
   const handleDataVerticalScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     leftListRef.current?.scrollToOffset({

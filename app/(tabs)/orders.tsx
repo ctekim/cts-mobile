@@ -28,6 +28,7 @@ import { ConfirmDialog } from '../../src/components/ConfirmDialog';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { OrderDetailSheet } from '../../src/components/OrderDetailSheet';
 import { Fab } from '../../src/components/Fab';
+import { confirmLogout } from '../../src/services/logout_coordinator';
 
 const ORDER_NUM_WIDTH = 80;
 const ROW_HEIGHT = 36;
@@ -172,10 +173,12 @@ export default function OrdersScreen() {
     if (!connected) router.replace('/');
   }, [connected, router]);
 
-  const onLogout = () => {
-    handleLogout();
-    router.replace('/');
-  };
+   const onLogout = async () => {
+      const ok = await confirmLogout();
+      if (!ok) return;
+      handleLogout();
+      router.replace('/');
+   };
 
   const handleDataVerticalScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     leftListRef.current?.scrollToOffset({

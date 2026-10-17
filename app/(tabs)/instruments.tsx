@@ -22,6 +22,7 @@ import {
 import { STATUS_ACTIVE, STATUS_SUSPEND } from '../../src/common/common';
 import { selectIsMarketController } from '../../src/redux/globalsSlice';
 import { ConfirmDialog } from '../../src/components/ConfirmDialog';
+import { confirmLogout } from '../../src/services/logout_coordinator';
 
 const CODE_WIDTH = 90;
 const ROW_HEIGHT = 36;
@@ -73,7 +74,9 @@ export default function InstrumentsScreen() {
       if (!connected) router.replace('/');
    }, [connected, router]);
 
-   const onLogout = () => {
+   const onLogout = async () => {
+      const ok = await confirmLogout();
+      if (!ok) return;
       handleLogout();
       router.replace('/');
    };

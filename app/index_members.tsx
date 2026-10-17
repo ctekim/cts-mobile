@@ -12,6 +12,7 @@ import { formatPrice, formatStatus } from '../src/common/format';
 import { DarkTheme } from '../src/common/theme';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
 import { sendIndexMemberStatus } from '../src/services/index_member_messages';
+import { confirmLogout } from '../src/services/logout_coordinator';
 
 const IDX_WIDTH = 110;
 const ROW_HEIGHT = 36;
@@ -70,10 +71,12 @@ export default function IndexMembersScreen() {
     else if (!isMarketController) router.replace('/(tabs)/more');
   }, [connected, isMarketController, router]);
 
-  const onLogout = () => {
-    handleLogout();
-    router.replace('/');
-  };
+   const onLogout = async () => {
+      const ok = await confirmLogout();
+      if (!ok) return;
+      handleLogout();
+      router.replace('/');
+   };
 
   const handleDataVerticalScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     leftListRef.current?.scrollToOffset({

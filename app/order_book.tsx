@@ -10,6 +10,7 @@ import { handleLogout } from '../src/services/logout';
 import { formatPrice, formatQty } from '../src/common/format';
 import { DarkTheme } from '../src/common/theme';
 import { Fab } from '../src/components/Fab';
+import { confirmLogout } from '../src/services/logout_coordinator';
 
 const ROW_HEIGHT = 30;
 const BUY_MARKET_PRICE = 99999999999;
@@ -122,10 +123,12 @@ export default function OrderBookScreen() {
     if (!connected) router.replace('/');
   }, [connected, router]);
 
-  const onLogout = () => {
-    handleLogout();
-    router.replace('/');
-  };
+   const onLogout = async () => {
+      const ok = await confirmLogout();
+      if (!ok) return;
+      handleLogout();
+      router.replace('/');
+   };
 
   // ---- Cell text ----
   const cellText = (row: any, col: { key: string }): string => {

@@ -18,6 +18,7 @@ import {
   sendFirmChangeStatus,
   sendFirmCancelAllOrders,
 } from '../src/services/firm_messages';
+import { confirmLogout } from '../src/services/logout_coordinator';
 
 const CODE_WIDTH = 100;
 const ROW_HEIGHT = 36;
@@ -68,10 +69,12 @@ export default function FirmsScreen() {
     else if (!isMarketController) router.replace('/(tabs)/more');
   }, [connected, isMarketController, router]);
 
-  const onLogout = () => {
-    handleLogout();
-    router.replace('/');
-  };
+   const onLogout = async () => {
+      const ok = await confirmLogout();
+      if (!ok) return;
+      handleLogout();
+      router.replace('/');
+   };
 
   const handleDataVerticalScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     leftListRef.current?.scrollToOffset({

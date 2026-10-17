@@ -16,6 +16,7 @@ import { DarkTheme } from '../src/common/theme';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
 import { sendIndexChangeStatus } from '../src/services/index_messages';
 import { STATUS_ACTIVE, STATUS_SUSPEND } from '../src/common/common';
+import { confirmLogout } from '../src/services/logout_coordinator';
 
 const IDX_WIDTH = 110;
 const ROW_HEIGHT = 36;
@@ -59,10 +60,12 @@ export default function IndicesScreen() {
     if (!connected) router.replace('/');
   }, [connected, router]);
 
-  const onLogout = () => {
-    handleLogout();
-    router.replace('/');
-  };
+   const onLogout = async () => {
+      const ok = await confirmLogout();
+      if (!ok) return;
+      handleLogout();
+      router.replace('/');
+   };
 
   const handleDataVerticalScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     leftListRef.current?.scrollToOffset({
