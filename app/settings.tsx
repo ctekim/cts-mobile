@@ -11,11 +11,12 @@ import Constants from 'expo-constants';
 
 import { DarkTheme } from '../src/common/theme';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
+import { DEFAULT_TRANSACTION_URL } from '../src/common/common';
 
 const SS_USER = 'cts_bio_user';
 const SS_PASS = 'cts_bio_pass';
 const SS_SERVER_URL = 'cts_server_url';
-const DEFAULT_SERVER_URL = 'ws://192.168.56.100:9401';
+// const DEFAULT_SERVER_URL = 'ws://192.168.56.100:9401';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -30,8 +31,8 @@ export default function SettingsScreen() {
   const [pendingUsername, setPendingUsername] = useState('');
 
   // server URL
-  const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER_URL);
-  const [serverUrlDraft, setServerUrlDraft] = useState(DEFAULT_SERVER_URL);
+  const [serverUrl, setServerUrl] = useState(DEFAULT_TRANSACTION_URL);
+  const [serverUrlDraft, setServerUrlDraft] = useState(DEFAULT_TRANSACTION_URL);
 
   // ---- generic alert dialog (replaces Alert. alert) ----
   const [alertDialog, setAlertDialog] = useState<{
@@ -150,8 +151,8 @@ export default function SettingsScreen() {
   const resetServerUrl = async () => {
     try {
       await SecureStore.deleteItemAsync(SS_SERVER_URL);
-      setServerUrl(DEFAULT_SERVER_URL);
-      setServerUrlDraft(DEFAULT_SERVER_URL);
+      setServerUrl(DEFAULT_TRANSACTION_URL);
+      setServerUrlDraft(DEFAULT_TRANSACTION_URL);
     } catch (e) {
       console.log('[settings] reset server url error', e);
     }

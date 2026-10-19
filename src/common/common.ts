@@ -3,6 +3,8 @@ import { Alert } from 'react-native';
 // import { DispatchTableEvent } from '../common/events';
 // import { v4 as uuidv4 } from 'uuid';
 
+export const DEFAULT_TRANSACTION_URL = 'wss://cts-markets.duckdns.org/ws';
+
 // json message types
 export const SUCCESS_REPLY                 = 888
 export const ERROR_REPLY                   = 999

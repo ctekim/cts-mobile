@@ -11,7 +11,7 @@ import * as SecureStore from 'expo-secure-store';
 import { MSGTYPE_HEARTBEAT, MSGTYPE_TS_LOGON, } from '../src/common/msg_types';
 import {
   JSON_KEY_BROWSER_SESSION_ID, JSON_KEY_IN_SEQ, JSON_KEY_MESSAGE_TYPE,
-  JSON_KEY_PASSWORD, JSON_KEY_SUBMITTER, JSON_KEY_TEST_ID, JSON_KEY_USER,
+  JSON_KEY_PASSWORD, JSON_KEY_SUBMITTER, JSON_KEY_TEST_ID, JSON_KEY_USER, DEFAULT_TRANSACTION_URL
 } from '../src/common/common';
 
 import { store } from '../src/redux/store';
@@ -33,7 +33,7 @@ import { ConfirmDialog } from '../src/components/ConfirmDialog';
 import { AppState } from 'react-native';
 import { startBackgroundService, stopBackgroundService } from '../src/services/background_service';
 
-const DEFAULT_TRANSACTION_URL = 'wss://192.168.1.50/ws';
+// const DEFAULT_TRANSACTION_URL = 'wss://cts-markets.duckdns.org/ws';
 const HEARTBEAT_INTERVAL = 20000;
 
 // SecureStore keys
