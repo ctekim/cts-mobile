@@ -1,31 +1,32 @@
 // src/services/event_messages.ts
-import { sendTsMessage } from './ts_send';
 import {
-  MSGTYPE_TRADING_EVENT_STATUS,
-  MSGTYPE_TRADING_EVENT_RUN,
-  MSGTYPE_TRADING_EVENT_MODIFY,
-  MSGTYPE_TRADING_EVENT_CREATE,
-  MSG_TYPE_TRADING_EVENTS_MOVE_ALL,
-} from '../common/msg_types';
-import {
-  JSON_KEY_MESSAGE_TYPE,
-  JSON_KEY_ID,
   JSON_KEY_CODE,
-  JSON_KEY_DESCRIPTION,
-  JSON_KEY_STATUS,
-  JSON_KEY_EXCHANGE,
-  JSON_KEY_MARKET,
-  JSON_KEY_INSTRUMENT,
-  JSON_KEY_PRIORITY,
-  JSON_KEY_TRADING_RULES,
-  JSON_KEY_TIME,
   JSON_KEY_DATE,
-  JSON_KEY_RUN_IMMEDIATELY,
-  JSON_KEY_SUBMITTER,
+  JSON_KEY_DAYS,
+  JSON_KEY_DESCRIPTION,
+  JSON_KEY_EXCHANGE,
   JSON_KEY_HOURS,
+  JSON_KEY_ID,
+  JSON_KEY_INSTRUMENT,
+  JSON_KEY_MARKET,
+  JSON_KEY_MESSAGE_TYPE,
   JSON_KEY_MINUTES,
   JSON_KEY_MOVE_TYPE,
+  JSON_KEY_PRIORITY,
+  JSON_KEY_RUN_IMMEDIATELY,
+  JSON_KEY_STATUS,
+  JSON_KEY_SUBMITTER,
+  JSON_KEY_TIME,
+  JSON_KEY_TRADING_RULES,
 } from '../common/common';
+import {
+  MSGTYPE_TRADING_EVENT_CREATE,
+  MSGTYPE_TRADING_EVENT_MODIFY,
+  MSGTYPE_TRADING_EVENT_RUN,
+  MSGTYPE_TRADING_EVENT_STATUS,
+  MSG_TYPE_TRADING_EVENTS_MOVE_ALL,
+} from '../common/msg_types';
+import { sendTsMessage } from './ts_send';
 
 const NONE = 'None';
 
@@ -63,6 +64,7 @@ export interface ModifyEventPayload {
   tradingRules: string;
   description: string;
   priority: number;
+  days: number;
   // optional
   time?: number;       // HHmmss
   date?: number;       // YYYYMMDD
@@ -79,6 +81,7 @@ export function sendTradingEventModify(p: ModifyEventPayload): boolean {
     [JSON_KEY_TRADING_RULES]: p.tradingRules,
     [JSON_KEY_DESCRIPTION]: p.description,
     [JSON_KEY_PRIORITY]: p.priority,
+    [JSON_KEY_DAYS]: Number(p.days),
   };
 
   if (p.time !== undefined && !isNaN(p.time)) payload[JSON_KEY_TIME] = p.time;
@@ -105,6 +108,7 @@ export interface CreateEventPayload {
   exchange?: string;
   market?: string;
   instrument?: string;
+  days?: number;
   submitter?: string;
 }
 
@@ -115,6 +119,7 @@ export function sendTradingEventCreate(p: CreateEventPayload): boolean {
     [JSON_KEY_TRADING_RULES]: p.tradingRules,
     [JSON_KEY_DESCRIPTION]: p.description,
     [JSON_KEY_PRIORITY]: p.priority,
+    [JSON_KEY_DAYS]: Number(p.days),
     [JSON_KEY_RUN_IMMEDIATELY]: p.runImmediately,
     [JSON_KEY_STATUS]: p.status,
   };

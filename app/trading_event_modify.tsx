@@ -1,24 +1,32 @@
 // app/trading_event_modify.tsx
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, TextInput, ScrollView, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, Modal, FlatList, Pressable,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text, TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { useAppSelector } from '../src/redux/hooks';
 import {
-  selectTSConnected,
-  selectIsMarketController,
-  selectTableData,
-} from '../src/redux/globalsSlice';
+  INSTRUMENT_TYPE_CRYPTO_CURRENCY,
+  INSTRUMENT_TYPE_CURRENCY,
+} from '../src/common/common';
 import { DarkTheme } from '../src/common/theme';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
-import { sendTradingEventModify } from '../src/services/event_messages';
 import {
-  INSTRUMENT_TYPE_CURRENCY,
-  INSTRUMENT_TYPE_CRYPTO_CURRENCY,
-} from '../src/common/common';
+  selectIsMarketController,
+  selectTableData,
+  selectTSConnected,
+} from '../src/redux/globalsSlice';
+import { useAppSelector } from '../src/redux/hooks';
+import { sendTradingEventModify } from '../src/services/event_messages';
 
 const EMPTY_ARRAY: any[] = [];
 const NONE = 'None';
@@ -106,6 +114,7 @@ export default function TradingEventModifyScreen() {
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [priority, setPriority] = useState('');
+  const [days, setDays] = useState(''); 
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [picker, setPicker] = useState<null | 'exchange' | 'market' | 'instrument'>(null);
@@ -132,6 +141,7 @@ export default function TradingEventModifyScreen() {
     setDate(normalizeDate(event.date));
     setTime(normalizeTime(event.time));
     setPriority(event.priority != null ? String(event.priority) : '');
+    setDays(event.days != null ? String(event.days) : '0');
   }, [event]);
 
   const validate = (): string | null => {
@@ -139,6 +149,8 @@ export default function TradingEventModifyScreen() {
     if (!description.trim()) return 'Description is required';
     if (!tradingRules.trim()) return 'Trading Rules is required';
     if (!priority.trim()) return 'Priority is required';
+    if (!days.trim()) return 'Days is required';             
+    if (isNaN(Number(days))) return 'Days must be a number';     
     if (isNaN(Number(priority))) return 'Priority must be a number';
     if (date && !dateToYyyymmdd(date)) return 'Date is invalid';
     if (time && !timeToHhmmss(time)) return 'Time is invalid';
@@ -159,6 +171,7 @@ export default function TradingEventModifyScreen() {
       tradingRules: tradingRules.trim(),
       description: description.trim(),
       priority: Number(priority),
+      days: Number(days), 
       date: date ? dateToYyyymmdd(date) : undefined,
       time: time ? timeToHhmmss(time) : undefined,
       exchange: exchange !== NONE ? exchange : undefined,
@@ -238,6 +251,7 @@ export default function TradingEventModifyScreen() {
         <Field label="Trading Rules" value={tradingRules} onChange={setTradingRules} />
         <Field label="Description" value={description} onChange={setDescription} />
         <Field label="Priority" value={priority} onChange={setPriority} keyboardType="number-pad" />
+        <Field label="Days" value={days} onChange={setDays} keyboardType="number-pad" />  
 
         {/* ---- Date picker ---- */}
         <Text style={[styles.label, { color: DarkTheme.textMuted }]}>Date</Text>

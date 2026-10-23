@@ -1,22 +1,30 @@
 // app/trading_events.tsx
-import { useRef, useEffect, useMemo, useState } from 'react';
-import {
-  View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
-  StyleSheet, NativeSyntheticEvent, NativeScrollEvent, Modal,
-  TextInput,
-} from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAppSelector } from '../src/redux/hooks';
-import { selectTSConnected, selectIsMarketController } from '../src/redux/globalsSlice';
-import { handleLogout } from '../src/services/logout';
-import { codeColorForStatus, DarkTheme } from '../src/common/theme';
-import { convertEventStatus } from '../src/common/event_constants';
-import { ConfirmDialog } from '../src/components/ConfirmDialog';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  sendTradingEventStatus,
+  FlatList,
+  Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { convertEventStatus } from '../src/common/event_constants';
+import { codeColorForStatus, DarkTheme } from '../src/common/theme';
+import { ConfirmDialog } from '../src/components/ConfirmDialog';
+import { selectIsMarketController, selectTSConnected } from '../src/redux/globalsSlice';
+import { useAppSelector } from '../src/redux/hooks';
+import {
   sendTradingEventRun,
   sendTradingEventsMoveAll,
+  sendTradingEventStatus,
 } from '../src/services/event_messages';
+import { handleLogout } from '../src/services/logout';
 import { confirmLogout } from '../src/services/logout_coordinator';
 
 const ID_WIDTH = 70;
@@ -54,6 +62,7 @@ const BASE_COLUMNS: ColumnDef[] = [
   { key: 'market',   label: 'Market',      width: 110, format: 'text' },
   { key: 'exch',     label: 'Exchange',    width: 100, format: 'text' },
   { key: 'instr',    label: 'Instrument',  width: 110, format: 'text' },
+  { key: 'days',     label: 'Days',        width: 70,  format: 'int' },
   { key: 'status',   label: 'Status',      width: 110, format: 'status' },
 ];
 

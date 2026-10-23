@@ -1,20 +1,28 @@
 // app/trading_event_create.tsx
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  View, Text, TextInput, ScrollView, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, Modal, FlatList, Pressable,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text, TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { useAppSelector } from '../src/redux/hooks';
-import { selectTSConnected, selectIsMarketController, selectTableData } from '../src/redux/globalsSlice';
+import {
+  INSTRUMENT_TYPE_CRYPTO_CURRENCY,
+  INSTRUMENT_TYPE_CURRENCY,
+} from '../src/common/common';
 import { DarkTheme } from '../src/common/theme';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
+import { selectIsMarketController, selectTableData, selectTSConnected } from '../src/redux/globalsSlice';
+import { useAppSelector } from '../src/redux/hooks';
 import { sendTradingEventCreate } from '../src/services/event_messages';
-import {
-  INSTRUMENT_TYPE_CURRENCY,
-  INSTRUMENT_TYPE_CRYPTO_CURRENCY,
-} from '../src/common/common';
 
 const EMPTY_ARRAY: any[] = [];
 const EMPTY_MAP: Record<string, any> = {};
@@ -84,6 +92,7 @@ export default function TradingEventCreateScreen() {
   const [tradingRules, setTradingRules] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState('');
+  const [days, setDays] = useState('0');  
   const [date, setDate] = useState(() => {
     const d = new Date();
     const yyyy = d.getFullYear();
@@ -129,6 +138,8 @@ export default function TradingEventCreateScreen() {
     if (!tradingRules.trim()) return 'Trading Rules is required';
     if (!priority.trim()) return 'Priority is required';
     if (isNaN(Number(priority))) return 'Priority must be a number';
+    if (!days.trim()) return 'Days is required';                 
+    if (isNaN(Number(days))) return 'Days must be a number';     
     if (runImmediately === 'N') {
       if (date && !dateToYyyymmdd(date)) return 'Date is invalid';
       if (time && !timeToHhmmss(time)) return 'Time is invalid';
@@ -149,6 +160,7 @@ export default function TradingEventCreateScreen() {
       tradingRules: tradingRules.trim(),
       description: description.trim(),
       priority: Number(priority),
+      days: Number(days),     
       status: CREATE_DEFAULT_STATUS,
       runImmediately,
       date: runImmediately === 'N' && date ? dateToYyyymmdd(date) : undefined,
@@ -203,7 +215,7 @@ export default function TradingEventCreateScreen() {
         <Field label="Trading Rules" value={tradingRules} onChange={setTradingRules} />
         <Field label="Description" value={description} onChange={setDescription} />
         <Field label="Priority" value={priority} onChange={setPriority} keyboardType="number-pad" />
-
+        <Field label="Days" value={days} onChange={setDays} keyboardType="number-pad" />  
         <NamedDropdown
           label="Run Immediately"
           value={runImmediately}
