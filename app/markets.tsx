@@ -357,8 +357,9 @@ export default function MarketsScreen() {
               label: 'Create New',
               style: 'success',
               onPress: () => {
+                const sourceCode = actionTarget.code;
                 setActionTarget(null);
-                router.push('/market_create');
+                router.push({ pathname: '/market_create', params: { from: sourceCode } });
               },
             },
           ]}

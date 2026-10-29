@@ -1,6 +1,6 @@
 // app/market_modify.tsx
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ScrollView, StyleSheet, Text, TextInput,
   TouchableOpacity, View,
@@ -24,10 +24,10 @@ export default function MarketModifyScreen() {
   const exchanges = useAppSelector(
     (s: any) => s.tables.tables.ExchangesTable ?? EMPTY_ARRAY
   );
-  const tradingRulesOptions = useAppSelector(
-    (s: any) => s.dropDown?.trading_rules ?? EMPTY_ARRAY
+    
+  const tradingRulesTable = useAppSelector(
+    (s: any) => s.tables.tables.TradingRulesTable ?? EMPTY_ARRAY
   );
-
   const code = typeof params.code === 'string' ? params.code : '';
   const existing = (markets as any[]).find((m) => m.code === code);
 
@@ -62,10 +62,10 @@ export default function MarketModifyScreen() {
 
   const tradingRulesPickerOptions = useMemo(
     () =>
-      (tradingRulesOptions as any[])
-        .filter((o) => o.id !== DROPDOWN_LIST_NONE)
-        .map((o) => ({ value: o.id, label: o.name })),
-    [tradingRulesOptions]
+      (tradingRulesTable as any[])
+        .filter((o) => o.code)
+        .map((o) => ({ value: o.code, label: o.code })),
+    [tradingRulesTable]
   );
 
   const onSubmit = () => {
@@ -106,6 +106,27 @@ export default function MarketModifyScreen() {
     }
     router.back();
   };
+
+  useEffect(() => {
+    if (!existing) return;
+    setDescription(existing.descr ?? '');
+    setExchange(existing.exch ?? '');
+
+    setLevel1Percentage(existing['1_per'] != null ? String(existing['1_per']) : '');
+    setLevel1Duration(existing['1_dur'] != null ? String(existing['1_dur']) : '');
+    setLevel1StartRules(existing['1_str'] ?? DROPDOWN_LIST_NONE);
+    setLevel1EndRules(existing['1_end'] ?? DROPDOWN_LIST_NONE);
+
+    setLevel2Percentage(existing['2_per'] != null ? String(existing['2_per']) : '');
+    setLevel2Duration(existing['2_dur'] != null ? String(existing['2_dur']) : '');
+    setLevel2StartRules(existing['2_str'] ?? DROPDOWN_LIST_NONE);
+    setLevel2EndRules(existing['2_end'] ?? DROPDOWN_LIST_NONE);
+
+    setLevel3Percentage(existing['3_per'] != null ? String(existing['3_per']) : '');
+    setLevel3Duration(existing['3_dur'] != null ? String(existing['3_dur']) : '');
+    setLevel3StartRules(existing['3_str'] ?? DROPDOWN_LIST_NONE);
+    setLevel3EndRules(existing['3_end'] ?? DROPDOWN_LIST_NONE);
+  }, [existing]);
 
   return (
     <View style={[styles.container, { backgroundColor: DarkTheme.background }]}>

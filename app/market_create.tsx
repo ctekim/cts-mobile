@@ -1,6 +1,6 @@
 // app/market_create.tsx
-import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ScrollView, StyleSheet, Text, TextInput,
   TouchableOpacity, View,
@@ -12,15 +12,22 @@ import { Picker } from '../src/components/Picker';
 import { useAppSelector } from '../src/redux/hooks';
 import { sendMarketCreate } from '../src/services/market_messages';
 
+
 const EMPTY_ARRAY: any[] = [];
 
 export default function MarketCreateScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ from?: string }>();
+  const sourceCode = typeof params.from === 'string' ? params.from : '';
+
+  const markets = useAppSelector(
+    (s: any) => s.tables.tables.MarketsTable ?? EMPTY_ARRAY
+  );
   const exchanges = useAppSelector(
     (s: any) => s.tables.tables.ExchangesTable ?? EMPTY_ARRAY
   );
-  const tradingRulesOptions = useAppSelector(
-    (s: any) => s.dropDown?.trading_rules ?? EMPTY_ARRAY
+  const tradingRulesTable = useAppSelector(
+    (s: any) => s.tables.tables.TradingRulesTable ?? EMPTY_ARRAY
   );
 
   const [code, setCode] = useState('');
@@ -55,11 +62,35 @@ export default function MarketCreateScreen() {
 
   const tradingRulesPickerOptions = useMemo(
     () =>
-      (tradingRulesOptions as any[])
-        .filter((o) => o.id !== DROPDOWN_LIST_NONE)
-        .map((o) => ({ value: o.id, label: o.name })),
-    [tradingRulesOptions]
+      (tradingRulesTable as any[])
+        .filter((o) => o.code)
+        .map((o) => ({ value: o.code, label: o.code })),
+    [tradingRulesTable]
   );
+
+  useEffect(() => {
+    if (!sourceCode) return;
+    const src = (markets as any[]).find((m) => m.code === sourceCode);
+    if (!src) return;
+
+    setDescription(src.descr ?? '');
+    setExchange(src.exch ?? '');
+
+    setLevel1Percentage(src['1_per'] != null ? String(src['1_per']) : '');
+    setLevel1Duration(src['1_dur'] != null ? String(src['1_dur']) : '');
+    setLevel1StartRules(src['1_str'] ?? DROPDOWN_LIST_NONE);
+    setLevel1EndRules(src['1_end'] ?? DROPDOWN_LIST_NONE);
+
+    setLevel2Percentage(src['2_per'] != null ? String(src['2_per']) : '');
+    setLevel2Duration(src['2_dur'] != null ? String(src['2_dur']) : '');
+    setLevel2StartRules(src['2_str'] ?? DROPDOWN_LIST_NONE);
+    setLevel2EndRules(src['2_end'] ?? DROPDOWN_LIST_NONE);
+
+    setLevel3Percentage(src['3_per'] != null ? String(src['3_per']) : '');
+    setLevel3Duration(src['3_dur'] != null ? String(src['3_dur']) : '');
+    setLevel3StartRules(src['3_str'] ?? DROPDOWN_LIST_NONE);
+    setLevel3EndRules(src['3_end'] ?? DROPDOWN_LIST_NONE);
+  }, [sourceCode, markets]);
 
   const onSubmit = () => {
     if (!code.trim()) return setValidationError('Code is missing.');

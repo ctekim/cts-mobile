@@ -1,6 +1,6 @@
 // app/index_create.tsx
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -31,11 +31,27 @@ export default function IndexCreateScreen() {
   const isMarketController = useAppSelector(selectIsMarketController);
   const submitter = useAppSelector(selectTSUserId);
 
-  const exchangeOptions: any[] = useAppSelector(
-    (s: any) => s.dropDown?.exchanges ?? EMPTY_ARRAY
+  const exchangesTable: any[] = useAppSelector(
+    (s: any) => s.tables.tables.ExchangesTable ?? EMPTY_ARRAY
   );
-  const tradingRulesOptions: any[] = useAppSelector(
-    (s: any) => s.dropDown?.trading_rules ?? EMPTY_ARRAY
+  const tradingRulesTable: any[] = useAppSelector(
+    (s: any) => s.tables.tables.TradingRulesTable ?? EMPTY_ARRAY
+  );
+
+  const exchangeOptions = useMemo(
+    () =>
+      (exchangesTable as any[])
+        .map((e) => ({ id: e.code, name: e.code }))
+        .sort((a, b) => a.id.localeCompare(b.id)),
+    [exchangesTable]
+  );
+
+  const tradingRulesOptions = useMemo(
+    () =>
+      (tradingRulesTable as any[])
+        .filter((o) => o.code)
+        .map((o) => ({ id: o.code, name: o.code })),
+    [tradingRulesTable]
   );
 
   const [code, setCode] = useState('');
@@ -69,6 +85,44 @@ export default function IndexCreateScreen() {
     if (router.canGoBack()) router.back();
     else router.replace('/indices');
   };
+
+  const params = useLocalSearchParams<{ from?: string }>();
+  const sourceIdx = typeof params.from === 'string' ? params.from : '';
+
+  const indicesTable = useAppSelector(
+    (s: any) => s.tables.tables.IndicesTable ?? EMPTY_ARRAY
+  );
+
+  useEffect(() => {
+    if (!sourceIdx) return;
+    const src = (indicesTable as any[]).find((r) => r.idx === sourceIdx);
+    if (!src) return;
+
+    setDescription(src.descr ?? '');
+    setPriceDecimals(src.price_dec != null ? String(src.price_dec) : '');
+    setValue(src.price != null ? String(src.price) : '');
+    setMinValue(src.min != null ? String(src.min) : '');
+    setMaxValue(src.max != null ? String(src.max) : '');
+    setValidateOrders(
+      src.val_ord === 'Y' ? 'Y' : 'N',
+    );
+    setExchange(src.exch ?? DROPDOWN_LIST_NONE);
+
+    setLevel1Percentage(src['1_per'] != null ? String(src['1_per']) : '');
+    setLevel1Duration(src['1_dur'] != null ? String(src['1_dur']) : '');
+    setLevel1StartRules(src['1_str'] ?? DROPDOWN_LIST_NONE);
+    setLevel1EndRules(src['1_end'] ?? DROPDOWN_LIST_NONE);
+
+    setLevel2Percentage(src['2_per'] != null ? String(src['2_per']) : '');
+    setLevel2Duration(src['2_dur'] != null ? String(src['2_dur']) : '');
+    setLevel2StartRules(src['2_str'] ?? DROPDOWN_LIST_NONE);
+    setLevel2EndRules(src['2_end'] ?? DROPDOWN_LIST_NONE);
+
+    setLevel3Percentage(src['3_per'] != null ? String(src['3_per']) : '');
+    setLevel3Duration(src['3_dur'] != null ? String(src['3_dur']) : '');
+    setLevel3StartRules(src['3_str'] ?? DROPDOWN_LIST_NONE);
+    setLevel3EndRules(src['3_end'] ?? DROPDOWN_LIST_NONE);
+  }, [sourceIdx, indicesTable]);
 
   useEffect(() => {
     if (!connected) router.replace('/');

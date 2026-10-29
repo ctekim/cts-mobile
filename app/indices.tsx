@@ -1,27 +1,34 @@
 // app/(tabs)/indices.tsx
-import { useRef, useEffect, useState } from 'react';
-import {
-  View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
-  StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
-} from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAppSelector } from '../src/redux/hooks';
+import { useEffect, useRef, useState } from 'react';
 import {
-  selectTSConnected,
-  selectIsMarketController,
-} from '../src/redux/globalsSlice';
-import { handleLogout } from '../src/services/logout';
+  FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { STATUS_ACTIVE, STATUS_SUSPEND } from '../src/common/common';
 import { formatPrice, formatStatus } from '../src/common/format';
 import { DarkTheme } from '../src/common/theme';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
+import {
+  selectIsMarketController,
+  selectTSConnected,
+} from '../src/redux/globalsSlice';
+import { useAppSelector } from '../src/redux/hooks';
 import { sendIndexChangeStatus } from '../src/services/index_messages';
-import { STATUS_ACTIVE, STATUS_SUSPEND } from '../src/common/common';
+import { handleLogout } from '../src/services/logout';
 import { confirmLogout } from '../src/services/logout_coordinator';
 
 const IDX_WIDTH = 110;
 const ROW_HEIGHT = 36;
 
-type ColumnFormat = 'text' | 'price' | 'status';
+type ColumnFormat = 'text' | 'price' | 'status' | 'yn';
 
 interface ColumnDef {
   key: string;
@@ -32,11 +39,32 @@ interface ColumnDef {
 
 const COLUMNS: ColumnDef[] = [
   { key: 'price',  label: 'Value',       width: 110, format: 'price' },
-  { key: 'status', label: 'Status',      width: 60, format: 'status' },
+  { key: 'status', label: 'Status',      width: 60,  format: 'status' },
   { key: 'descr',  label: 'Description', width: 200, format: 'text' },
 ];
 
-const TOTAL_DATA_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
+const ADMIN_COLUMNS: ColumnDef[] = [
+  { key: 'exch',   label: 'Exchange',    width: 100, format: 'text' },
+
+  { key: '1_per',  label: 'Lvl 1 %',     width: 70,  format: 'text' },
+  { key: '1_dur',  label: 'Lvl 1 Dur',   width: 80,  format: 'text' },
+  { key: '1_trig', label: 'Lvl 1 Trig',  width: 80,  format: 'yn' },
+  { key: '1_str',  label: 'Lvl 1 Start', width: 110, format: 'text' },
+  { key: '1_end',  label: 'Lvl 1 End',   width: 110, format: 'text' },
+
+  { key: '2_per',  label: 'Lvl 2 %',     width: 70,  format: 'text' },
+  { key: '2_dur',  label: 'Lvl 2 Dur',   width: 80,  format: 'text' },
+  { key: '2_trig', label: 'Lvl 2 Trig',  width: 80,  format: 'yn' },
+  { key: '2_str',  label: 'Lvl 2 Start', width: 110, format: 'text' },
+  { key: '2_end',  label: 'Lvl 2 End',   width: 110, format: 'text' },
+
+  { key: '3_per',  label: 'Lvl 3 %',     width: 70,  format: 'text' },
+  // { key: '3_dur',  label: 'Lvl 3 Dur',   width: 80,  format: 'text' },
+  { key: '3_trig', label: 'Lvl 3 Trig',  width: 80,  format: 'yn' },
+  { key: '3_str',  label: 'Lvl 3 Start', width: 110, format: 'text' },
+  // { key: '3_end',  label: 'Lvl 3 End',   width: 110, format: 'text' },
+];
+
 const EMPTY_ARRAY: any[] = [];
 
 export default function IndicesScreen() {
@@ -46,6 +74,12 @@ export default function IndicesScreen() {
   const indices = useAppSelector(
     (s: any) => s.tables.tables.IndicesTable ?? EMPTY_ARRAY
   );
+
+  const columns = isMarketController
+    ? [...COLUMNS, ...ADMIN_COLUMNS]
+    : COLUMNS;
+
+  const totalDataWidth = columns.reduce((sum, c) => sum + c.width, 0);
 
   const [actionTarget, setActionTarget] = useState<any | null>(null);
   const [pendingAction, setPendingAction] = useState<
@@ -60,12 +94,12 @@ export default function IndicesScreen() {
     if (!connected) router.replace('/');
   }, [connected, router]);
 
-   const onLogout = async () => {
-      const ok = await confirmLogout();
-      if (!ok) return;
-      handleLogout();
-      router.replace('/');
-   };
+  const onLogout = async () => {
+    const ok = await confirmLogout();
+    if (!ok) return;
+    handleLogout();
+    router.replace('/');
+  };
 
   const handleDataVerticalScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     leftListRef.current?.scrollToOffset({
@@ -81,20 +115,19 @@ export default function IndicesScreen() {
     });
   };
 
-  // ----- Cell text -----
   const cellText = (item: any, col: ColumnDef): string => {
     const raw = item[col.key];
-    if (raw === null || raw === undefined) return '';
+    if (raw === null || raw === undefined || raw === '') return '';
 
     switch (col.format) {
       case 'price':  return formatPrice(raw, item.price_dec ?? 0);
       case 'status': return formatStatus(raw);
+      case 'yn':     return raw === 'Y' ? 'Yes' : raw === 'N' ? 'No' : String(raw);
       case 'text':
       default:       return String(raw);
     }
   };
 
-  // ----- Cell color -----
   const cellColor = (item: any, col: ColumnDef): string => {
     if (col.key === 'status') {
       const s = String(item.status ?? '').toUpperCase();
@@ -107,25 +140,21 @@ export default function IndicesScreen() {
     return DarkTheme.text;
   };
 
-  // ----- Index code color (red when suspended, grey when inactive, default otherwise) -----
   const indexCodeColor = (item: any): string => {
     const s = String(item.status ?? '').trim().toUpperCase();
     switch (s) {
-      case 'S':
-        return DarkTheme.negative;
-      case 'N':       // New
-      case 'I':       // Inactive
-      case 'D':       // Deleted
-      case 'H':       // Halted
-        return DarkTheme.textMuted;
-      default:
-        return DarkTheme.codeText;
+      case 'S': return DarkTheme.negative;
+      case 'N':
+      case 'I':
+      case 'D':
+      case 'H': return DarkTheme.textMuted;
+      default:  return DarkTheme.codeText;
     }
   };
 
-  const isActiveStatus = (item: any): boolean => String(item.status ?? '').trim().toUpperCase() === 'A';
+  const isActiveStatus = (item: any): boolean =>
+    String(item.status ?? '').trim().toUpperCase() === 'A';
 
-  // ----- Renderers -----
   const renderIdxCell = ({ item, index }: { item: any; index: number }) => {
     const isActive = isActiveStatus(item);
 
@@ -155,7 +184,7 @@ export default function IndicesScreen() {
   };
 
   const renderDataRow = ({ item, index }: { item: any; index: number }) => {
-    const isActive = String(item.status ?? '').trim().toUpperCase() === 'A';
+    const isActive = isActiveStatus(item);
 
     return (
       <Pressable
@@ -173,7 +202,7 @@ export default function IndicesScreen() {
           setActionTarget(item);
         }}
       >
-        {COLUMNS.map((col) => (
+        {columns.map((col) => (
           <Text
             key={col.key}
             style={[
@@ -231,9 +260,9 @@ export default function IndicesScreen() {
           scrollEnabled={false}
           showsHorizontalScrollIndicator={false}
           style={styles.headerScroll}
-          contentContainerStyle={{ width: TOTAL_DATA_WIDTH }}
+          contentContainerStyle={{ width: totalDataWidth }}
         >
-          {COLUMNS.map((col) => (
+          {columns.map((col) => (
             <View
               key={col.key}
               style={[
@@ -268,13 +297,13 @@ export default function IndicesScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator
-          contentContainerStyle={{ width: TOTAL_DATA_WIDTH }}
+          contentContainerStyle={{ width: totalDataWidth }}
           style={{ flex: 1 }}
           onScroll={handleDataHorizontalScroll}
           scrollEventThrottle={16}
         >
           <FlatList
-            style={{ width: TOTAL_DATA_WIDTH }}
+            style={{ width: totalDataWidth }}
             data={indices}
             keyExtractor={(r: any) => String(r.idx)}
             renderItem={renderDataRow}
@@ -295,7 +324,6 @@ export default function IndicesScreen() {
         </ScrollView>
       </View>
 
-      {/* ---------------- Row action menu ---------------- */}
       {actionTarget && (
         <ConfirmDialog
           visible={true}
@@ -303,11 +331,7 @@ export default function IndicesScreen() {
           message="Choose an action"
           variant="default"
           actions={[
-            {
-              label: 'Back',
-              style: 'cancel',
-              onPress: () => {},
-            },
+            { label: 'Back', style: 'cancel', onPress: () => {} },
             {
               label:
                 String(actionTarget.status).toUpperCase() === STATUS_ACTIVE
@@ -334,14 +358,6 @@ export default function IndicesScreen() {
               },
             },
             {
-              label: 'Create New',
-              style: 'success',
-              onPress: () => {
-                setActionTarget(null);
-                router.push('/index_create');
-              },
-            },
-            {
               label: 'Modify',
               style: 'success',
               onPress: () => {
@@ -350,12 +366,20 @@ export default function IndicesScreen() {
                 router.push({ pathname: '/index_modify', params: { idx } });
               },
             },
+            {
+              label: 'Create New',
+              style: 'success',
+              onPress: () => {
+                const sourceIdx = actionTarget.idx;
+                setActionTarget(null);
+                router.push({ pathname: '/index_create', params: { from: sourceIdx } });
+              },
+            },
           ]}
           onClose={() => setActionTarget(null)}
         />
       )}
 
-      {/* ---------------- Confirm status change ---------------- */}
       {pendingAction && (
         <ConfirmDialog
           visible={true}
@@ -370,11 +394,7 @@ export default function IndicesScreen() {
               : DarkTheme.negative
           }
           actions={[
-            {
-              label: 'No',
-              style: 'cancel',
-              onPress: () => {},
-            },
+            { label: 'No', style: 'cancel', onPress: () => {} },
             {
               label: 'Confirm',
               style:
