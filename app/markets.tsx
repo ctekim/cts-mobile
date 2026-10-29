@@ -1,27 +1,34 @@
 // app/markets.tsx
-import { useRef, useState, useEffect } from 'react';
-import {
-  View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
-  StyleSheet, NativeSyntheticEvent, NativeScrollEvent,
-} from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAppSelector } from '../src/redux/hooks';
-import { selectTSConnected, selectIsMarketController } from '../src/redux/globalsSlice';
-import { handleLogout } from '../src/services/logout';
+import { useEffect, useRef, useState } from 'react';
+import {
+  FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { STATUS_ACTIVE, STATUS_SUSPEND } from '../src/common/common';
 import { formatStatus } from '../src/common/format';
 import { codeColorForStatus, DarkTheme } from '../src/common/theme';
-import {
-  sendMarketChangeStatus,
-  sendMarketCancelAllOrders,
-} from '../src/services/market_messages';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
-import { STATUS_ACTIVE, STATUS_SUSPEND } from '../src/common/common';
+import { selectIsMarketController, selectTSConnected } from '../src/redux/globalsSlice';
+import { useAppSelector } from '../src/redux/hooks';
+import { handleLogout } from '../src/services/logout';
 import { confirmLogout } from '../src/services/logout_coordinator';
+import {
+  sendMarketCancelAllOrders,
+  sendMarketChangeStatus,
+} from '../src/services/market_messages';
 
 const CODE_WIDTH = 120;
 const ROW_HEIGHT = 36;
 
-type ColumnFormat = 'text' | 'status';
+type ColumnFormat = 'text' | 'status' | 'yn';
 
 interface ColumnDef {
   key: string;
@@ -34,6 +41,24 @@ const COLUMNS: ColumnDef[] = [
   { key: 'exch',   label: 'Exchange',    width: 100, format: 'text' },
   { key: 'descr',  label: 'Description', width: 260, format: 'text' },
   { key: 'status', label: 'Status',      width: 100, format: 'status' },
+
+  { key: '1_per',  label: 'Lvl 1 %',     width: 80,  format: 'text' },
+  { key: '1_dur',  label: 'Lvl 1 Dur',   width: 80,  format: 'text' },
+  { key: '1_trig', label: 'Lvl 1 Trig',  width: 80,  format: 'yn' },
+  { key: '1_str',  label: 'Lvl 1 Start', width: 110, format: 'text' },
+  { key: '1_end',  label: 'Lvl 1 End',   width: 110, format: 'text' },
+
+  { key: '2_per',  label: 'Lvl 2 %',     width: 80,  format: 'text' },
+  { key: '2_dur',  label: 'Lvl 2 Dur',   width: 80,  format: 'text' },
+  { key: '2_trig', label: 'Lvl 2 Trig',  width: 80,  format: 'yn' },
+  { key: '2_str',  label: 'Lvl 2 Start', width: 110, format: 'text' },
+  { key: '2_end',  label: 'Lvl 2 End',   width: 110, format: 'text' },
+
+  { key: '3_per',  label: 'Lvl 3 %',     width: 80,  format: 'text' },
+  // { key: '3_dur',  label: 'Lvl 3 Dur',   width: 80,  format: 'text' },
+  { key: '3_trig', label: 'Lvl 3 Trig',  width: 80,  format: 'text' },
+  // { key: '3_str',  label: 'Lvl 3 Start', width: 110, format: 'text' },
+  { key: '3_end',  label: 'Lvl 3 End',   width: 110, format: 'text' },
 ];
 
 const TOTAL_DATA_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
@@ -88,6 +113,7 @@ export default function MarketsScreen() {
 
     switch (col.format) {
       case 'status': return formatStatus(raw);
+      case 'yn':     return raw === 'Y' ? 'Yes' : raw === 'N' ? 'No' : String(raw);
       case 'text':
       default:       return String(raw);
     }

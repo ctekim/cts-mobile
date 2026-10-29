@@ -1,24 +1,42 @@
 // app/index_create.tsx
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  View, Text, TextInput, ScrollView, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text, TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAppSelector } from '../src/redux/hooks';
-import { selectTSConnected, selectIsMarketController, selectTSUserId } from '../src/redux/globalsSlice';
+import {
+  DROPDOWN_LIST_NONE,
+  SUSPEND, SUSPENDED
+} from '../src/common/common';
 import { DarkTheme } from '../src/common/theme';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
+import { selectIsMarketController, selectTSConnected, selectTSUserId } from '../src/redux/globalsSlice';
+import { useAppSelector } from '../src/redux/hooks';
 import { sendIndexCreate } from '../src/services/index_messages';
-import {
-  STATUS_ACTIVE, SUSPEND, SUSPENDED,
-} from '../src/common/common';
+
+const EMPTY_ARRAY: any[] = [];
 
 export default function IndexCreateScreen() {
   const router = useRouter();
   const connected = useAppSelector(selectTSConnected);
   const isMarketController = useAppSelector(selectIsMarketController);
   const submitter = useAppSelector(selectTSUserId);
+
+  const exchangeOptions: any[] = useAppSelector(
+    (s: any) => s.dropDown?.exchanges ?? EMPTY_ARRAY
+  );
+  const tradingRulesOptions: any[] = useAppSelector(
+    (s: any) => s.dropDown?.trading_rules ?? EMPTY_ARRAY
+  );
 
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
@@ -27,6 +45,22 @@ export default function IndexCreateScreen() {
   const [minValue, setMinValue] = useState('');
   const [maxValue, setMaxValue] = useState('');
   const [validateOrders, setValidateOrders] = useState<'Y' | 'N'>('N');
+  const [exchange, setExchange] = useState<string>(DROPDOWN_LIST_NONE);
+
+  const [level1Percentage, setLevel1Percentage] = useState('');
+  const [level1Duration, setLevel1Duration]     = useState('');
+  const [level1StartRules, setLevel1StartRules] = useState<string>(DROPDOWN_LIST_NONE);
+  const [level1EndRules, setLevel1EndRules]     = useState<string>(DROPDOWN_LIST_NONE);
+
+  const [level2Percentage, setLevel2Percentage] = useState('');
+  const [level2Duration, setLevel2Duration]     = useState('');
+  const [level2StartRules, setLevel2StartRules] = useState<string>(DROPDOWN_LIST_NONE);
+  const [level2EndRules, setLevel2EndRules]     = useState<string>(DROPDOWN_LIST_NONE);
+
+  const [level3Percentage, setLevel3Percentage] = useState('');
+  const [level3Duration, setLevel3Duration]     = useState('');
+  const [level3StartRules, setLevel3StartRules] = useState<string>(DROPDOWN_LIST_NONE);
+  const [level3EndRules, setLevel3EndRules]     = useState<string>(DROPDOWN_LIST_NONE);
 
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
@@ -66,7 +100,6 @@ export default function IndexCreateScreen() {
     const scaledMin = minValue !== '' ? Math.round(parseFloat(minValue) * factor) : undefined;
     const scaledMax = maxValue !== '' ? Math.round(parseFloat(maxValue) * factor) : undefined;
 
-    // Create defaults status to SUSPEND, matching the web form.
     const defaultStatus = SUSPEND ?? SUSPENDED;
 
     const ok = sendIndexCreate({
@@ -79,6 +112,23 @@ export default function IndexCreateScreen() {
       min: scaledMin,
       max: scaledMax,
       submitter,
+
+      exchange: exchange === DROPDOWN_LIST_NONE ? null : exchange,
+
+      level1Percentage: level1Percentage === '' ? null : Number(level1Percentage),
+      level1Duration:   level1Duration   === '' ? null : Number(level1Duration),
+      level1StartRules: level1StartRules === DROPDOWN_LIST_NONE ? null : level1StartRules,
+      level1EndRules:   level1EndRules   === DROPDOWN_LIST_NONE ? null : level1EndRules,
+
+      level2Percentage: level2Percentage === '' ? null : Number(level2Percentage),
+      level2Duration:   level2Duration   === '' ? null : Number(level2Duration),
+      level2StartRules: level2StartRules === DROPDOWN_LIST_NONE ? null : level2StartRules,
+      level2EndRules:   level2EndRules   === DROPDOWN_LIST_NONE ? null : level2EndRules,
+
+      level3Percentage: level3Percentage === '' ? null : Number(level3Percentage),
+      level3Duration:   level3Duration   === '' ? null : Number(level3Duration),
+      level3StartRules: level3StartRules === DROPDOWN_LIST_NONE ? null : level3StartRules,
+      level3EndRules:   level3EndRules   === DROPDOWN_LIST_NONE ? null : level3EndRules,
     });
     if (!ok) console.warn('[index_create] not connected');
     setConfirm(false);
@@ -130,6 +180,30 @@ export default function IndexCreateScreen() {
           })}
         </View>
 
+        <SelectField
+          label="Exchange"
+          value={exchange}
+          options={exchangeOptions}
+          onChange={setExchange}
+        />
+
+        <SectionLabel text="Circuit Breakers" />
+
+        <Field label="Level 1 Percentage" value={level1Percentage} onChange={setLevel1Percentage} keyboardType="numeric" />
+        <Field label="Level 1 Duration"   value={level1Duration}   onChange={setLevel1Duration}   keyboardType="numeric" />
+        <SelectField label="Level 1 Start Trading Rules" value={level1StartRules} options={tradingRulesOptions} onChange={setLevel1StartRules} />
+        <SelectField label="Level 1 End Trading Rules"   value={level1EndRules}   options={tradingRulesOptions} onChange={setLevel1EndRules} />
+
+        <Field label="Level 2 Percentage" value={level2Percentage} onChange={setLevel2Percentage} keyboardType="numeric" />
+        <Field label="Level 2 Duration"   value={level2Duration}   onChange={setLevel2Duration}   keyboardType="numeric" />
+        <SelectField label="Level 2 Start Trading Rules" value={level2StartRules} options={tradingRulesOptions} onChange={setLevel2StartRules} />
+        <SelectField label="Level 2 End Trading Rules"   value={level2EndRules}   options={tradingRulesOptions} onChange={setLevel2EndRules} />
+
+        <Field label="Level 3 Percentage" value={level3Percentage} onChange={setLevel3Percentage} keyboardType="numeric" />
+        <Field label="Level 3 Duration"   value={level3Duration}   onChange={setLevel3Duration}   keyboardType="numeric" />
+        <SelectField label="Level 3 Start Trading Rules" value={level3StartRules} options={tradingRulesOptions} onChange={setLevel3StartRules} />
+        <SelectField label="Level 3 End Trading Rules"   value={level3EndRules}   options={tradingRulesOptions} onChange={setLevel3EndRules} />
+
         {error && <Text style={{ color: DarkTheme.negative, marginTop: 8 }}>{error}</Text>}
 
         <TouchableOpacity
@@ -159,6 +233,14 @@ export default function IndexCreateScreen() {
 }
 
 // ---------- small components ----------
+function SectionLabel({ text }: { text: string }) {
+  return (
+    <Text style={[styles.label, { color: DarkTheme.textMuted, marginTop: 16, marginBottom: 6 }]}>
+      {text}
+    </Text>
+  );
+}
+
 function Field({
   label, value, onChange, keyboardType,
 }: {
@@ -179,6 +261,56 @@ function Field({
         keyboardType={keyboardType}
         placeholderTextColor={DarkTheme.textMuted}
       />
+    </View>
+  );
+}
+
+function SelectField({
+  label, value, options, onChange,
+}: {
+  label: string;
+  value: string;
+  options: { id: string; name: string }[];
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const display = value === DROPDOWN_LIST_NONE ? '' : value;
+
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <Text style={[styles.label, { color: DarkTheme.textMuted }]}>{label}</Text>
+      <TouchableOpacity
+        onPress={() => setOpen(true)}
+        style={[
+          styles.input,
+          {
+            borderColor: DarkTheme.cellBorder,
+            backgroundColor: DarkTheme.surface,
+            justifyContent: 'center',
+          },
+        ]}
+      >
+        <Text style={{ color: DarkTheme.text }}>{display || 'Select…'}</Text>
+      </TouchableOpacity>
+
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
+          <View style={[styles.dropdownPanel, { backgroundColor: DarkTheme.surface }]}>
+            <FlatList
+              data={options}
+              keyExtractor={(item) => String(item.id)}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.dropdownItem}
+                  onPress={() => { onChange(item.id); setOpen(false); }}
+                >
+                  <Text style={{ color: DarkTheme.text }}>{item.name}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -213,5 +345,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  dropdownPanel: {
+    borderRadius: 8,
+    maxHeight: 400,
+    paddingVertical: 8,
+  },
+  dropdownItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
 });

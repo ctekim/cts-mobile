@@ -479,6 +479,47 @@ export const JSON_KEY_TR_CHECKPOINT            = "cp";
 export const JSON_KEY_TR_PRE_FUNCTION          = "pre";
 export const JSON_KEY_TR_POST_FUNCTION         = "post";
 
+// Circuit breaker level 1
+export const JSON_KEY_LEVEL1_PERCENTAGE               = "1_per";
+export const JSON_KEY_LEVEL1_DURATION                 = "1_dur";
+export const JSON_KEY_LEVEL1_TRIGGERED                = "1_trig";
+export const JSON_KEY_LEVEL1_START_TRADING_RULES_CODE = "1_str";
+export const JSON_KEY_LEVEL1_END_TRADING_RULES_CODE   = "1_end";
+
+// Circuit breaker level 2
+export const JSON_KEY_LEVEL2_PERCENTAGE               = "2_per";
+export const JSON_KEY_LEVEL2_DURATION                 = "2_dur";
+export const JSON_KEY_LEVEL2_TRIGGERED                = "2_trig";
+export const JSON_KEY_LEVEL2_START_TRADING_RULES_CODE = "2_str";
+export const JSON_KEY_LEVEL2_END_TRADING_RULES_CODE   = "2_end";
+
+// Circuit breaker level 3
+export const JSON_KEY_LEVEL3_PERCENTAGE               = "3_per";
+export const JSON_KEY_LEVEL3_DURATION                 = "3_dur";
+export const JSON_KEY_LEVEL3_TRIGGERED                = "3_trig";
+export const JSON_KEY_LEVEL3_START_TRADING_RULES_CODE = "3_str";
+export const JSON_KEY_LEVEL3_END_TRADING_RULES_CODE   = "3_end";
+
+// Circuit breaker level 1
+export const HEADER_LEVEL1_PERCENTAGE               = "Lvl 1 Percentage";
+export const HEADER_LEVEL1_DURATION                 = "Lvl 1 Duration";
+export const HEADER_LEVEL1_TRIGGERED                = "Lvl 1 Triggered";
+export const HEADER_LEVEL1_START_TRADING_RULES_CODE = "Lvl 1 Start";
+export const HEADER_LEVEL1_END_TRADING_RULES_CODE   = "Lvl 1 End";
+
+// Circuit breaker level 2
+export const HEADER_LEVEL2_PERCENTAGE               = "Lvl 2 Percentage";
+export const HEADER_LEVEL2_DURATION                 = "Lvl 2 Duration";
+export const HEADER_LEVEL2_TRIGGERED                = "Lvl 2 Triggered";
+export const HEADER_LEVEL2_START_TRADING_RULES_CODE = "Lvl 2 Start";
+export const HEADER_LEVEL2_END_TRADING_RULES_CODE   = "Lvl 2 End";
+
+// Circuit breaker level 3
+export const HEADER_LEVEL3_PERCENTAGE               = "Lvl 3 Percentage";
+export const HEADER_LEVEL3_DURATION                 = "Lvl 3 Duration";
+export const HEADER_LEVEL3_TRIGGERED                = "Lvl 3 Triggered";
+export const HEADER_LEVEL3_START_TRADING_RULES_CODE = "Lvl 3 Start";
+export const HEADER_LEVEL3_END_TRADING_RULES_CODE   = "Lvl 3 End";
 
 // print tables
 export const PRINT_ALL                        = "z"

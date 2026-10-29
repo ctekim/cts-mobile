@@ -1,10 +1,10 @@
 // app/(tabs)/more.tsx
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAppSelector } from '../../src/redux/hooks';
-import { handleLogout } from '../../src/services/logout';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { DarkTheme } from '../../src/common/theme';
 import { selectIsMarketController } from '../../src/redux/globalsSlice';
+import { useAppSelector } from '../../src/redux/hooks';
+import { handleLogout } from '../../src/services/logout';
 import { confirmLogout } from '../../src/services/logout_coordinator';
 
 export default function MoreScreen() {
@@ -49,6 +49,10 @@ export default function MoreScreen() {
   
   const marketCount = useAppSelector(
     (s: any) => s.tables.tables.MarketsTable?.length ?? 0
+  );
+
+  const tradingRulesCount = useAppSelector(
+    (s: any) => s.tables.tables.TradingRulesTable?.length ?? 0
   );
 
   const isSuperUser = useAppSelector(selectIsMarketController);
@@ -169,6 +173,20 @@ export default function MoreScreen() {
               {indexMemberCount > 0 && (
                 <View style={[styles.badge, { backgroundColor: DarkTheme.accent }]}>
                   <Text style={styles.badgeText}>{indexMemberCount}</Text>
+                </View>
+              )}
+              <Text style={[styles.chevron, { color: DarkTheme.textMuted }]}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.row, { borderBottomColor: DarkTheme.cellBorder }]}
+              onPress={() => router.push('/trading_rules')}
+            >
+              <Text style={styles.icon}>📜</Text>
+              <Text style={[styles.label, { color: DarkTheme.text }]}>Trading Rules</Text>
+              {tradingRulesCount > 0 && (
+                <View style={[styles.badge, { backgroundColor: DarkTheme.accent }]}>
+                  <Text style={styles.badgeText}>{tradingRulesCount}</Text>
                 </View>
               )}
               <Text style={[styles.chevron, { color: DarkTheme.textMuted }]}>›</Text>
