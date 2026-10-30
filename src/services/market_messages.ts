@@ -45,22 +45,44 @@ export interface CircuitBreakerPayload {
 }
 
 function circuitBreakerKeys(p: CircuitBreakerPayload): Record<string, any> {
-  return {
-    [JSON_KEY_LEVEL1_PERCENTAGE]:               p.level1Percentage ?? null,
-    [JSON_KEY_LEVEL1_DURATION]:                 p.level1Duration   ?? null,
-    [JSON_KEY_LEVEL1_START_TRADING_RULES_CODE]: p.level1StartRules ?? null,
-    [JSON_KEY_LEVEL1_END_TRADING_RULES_CODE]:   p.level1EndRules   ?? null,
+  const out: Record<string, any> = {};
 
-    [JSON_KEY_LEVEL2_PERCENTAGE]:               p.level2Percentage ?? null,
-    [JSON_KEY_LEVEL2_DURATION]:                 p.level2Duration   ?? null,
-    [JSON_KEY_LEVEL2_START_TRADING_RULES_CODE]: p.level2StartRules ?? null,
-    [JSON_KEY_LEVEL2_END_TRADING_RULES_CODE]:   p.level2EndRules   ?? null,
-
-    [JSON_KEY_LEVEL3_PERCENTAGE]:               p.level3Percentage ?? null,
-    [JSON_KEY_LEVEL3_DURATION]:                 p.level3Duration   ?? null,
-    [JSON_KEY_LEVEL3_START_TRADING_RULES_CODE]: p.level3StartRules ?? null,
-    [JSON_KEY_LEVEL3_END_TRADING_RULES_CODE]:   p.level3EndRules   ?? null,
+  const addLevel = (
+    pct: number | null | undefined,
+    dur: number | null | undefined,
+    startRules: string | null | undefined,
+    endRules: string | null | undefined,
+    keys: { percentage: string; duration: string; startRules: string; endRules: string },
+  ) => {
+    if (pct == null && dur == null && startRules == null && endRules == null) return;
+    if (pct != null)        out[keys.percentage] = pct;
+    if (dur != null)        out[keys.duration]   = dur;
+    if (startRules != null) out[keys.startRules] = startRules;
+    if (endRules   != null) out[keys.endRules]   = endRules;
   };
+
+  addLevel(p.level1Percentage, p.level1Duration, p.level1StartRules, p.level1EndRules, {
+    percentage: JSON_KEY_LEVEL1_PERCENTAGE,
+    duration:   JSON_KEY_LEVEL1_DURATION,
+    startRules: JSON_KEY_LEVEL1_START_TRADING_RULES_CODE,
+    endRules:   JSON_KEY_LEVEL1_END_TRADING_RULES_CODE,
+  });
+
+  addLevel(p.level2Percentage, p.level2Duration, p.level2StartRules, p.level2EndRules, {
+    percentage: JSON_KEY_LEVEL2_PERCENTAGE,
+    duration:   JSON_KEY_LEVEL2_DURATION,
+    startRules: JSON_KEY_LEVEL2_START_TRADING_RULES_CODE,
+    endRules:   JSON_KEY_LEVEL2_END_TRADING_RULES_CODE,
+  });
+
+  addLevel(p.level3Percentage, p.level3Duration, p.level3StartRules, p.level3EndRules, {
+    percentage: JSON_KEY_LEVEL3_PERCENTAGE,
+    duration:   JSON_KEY_LEVEL3_DURATION,
+    startRules: JSON_KEY_LEVEL3_START_TRADING_RULES_CODE,
+    endRules:   JSON_KEY_LEVEL3_END_TRADING_RULES_CODE,
+  });
+
+  return out;
 }
 
 export function sendMarketChangeStatus(

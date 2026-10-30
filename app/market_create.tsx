@@ -207,21 +207,21 @@ export default function MarketCreateScreen() {
         />
 
         <NumberField label="Level 3 Percentage" value={level3Percentage} onChange={setLevel3Percentage} />
-        <NumberField label="Level 3 Duration"   value={level3Duration}   onChange={setLevel3Duration} />
+        {/* <NumberField label="Level 3 Duration"   value={level3Duration}   onChange={setLevel3Duration} />*/}
         <Picker
-          label="Level 3 Start Trading Rules"
+          label="Level 3 Trading Rules"
           value={level3StartRules}
           options={tradingRulesPickerOptions}
           onChange={setLevel3StartRules}
           placeholder="Select Trading Rules"
         />
-        <Picker
+        {/*<Picker
           label="Level 3 End Trading Rules"
           value={level3EndRules}
           options={tradingRulesPickerOptions}
           onChange={setLevel3EndRules}
           placeholder="Select Trading Rules"
-        />
+        />*/}
 
         <View style={styles.actions}>
           <TouchableOpacity

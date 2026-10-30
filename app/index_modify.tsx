@@ -38,11 +38,27 @@ export default function IndexModifyScreen() {
     (s: any) => s.tables.tables.IndicesTable ?? EMPTY_ARRAY
   );
 
-  const exchangeOptions: any[] = useAppSelector(
-    (s: any) => s.dropDown?.exchanges ?? EMPTY_ARRAY
+  const exchangesTable: any[] = useAppSelector(
+    (s: any) => s.tables.tables.ExchangesTable ?? EMPTY_ARRAY
   );
-  const tradingRulesOptions: any[] = useAppSelector(
-    (s: any) => s.dropDown?.trading_rules ?? EMPTY_ARRAY
+  const tradingRulesTable: any[] = useAppSelector(
+    (s: any) => s.tables.tables.TradingRulesTable ?? EMPTY_ARRAY
+  );
+
+  const exchangeOptions = useMemo(
+    () =>
+      (exchangesTable as any[])
+        .map((e) => ({ id: e.code, name: e.code }))
+        .sort((a, b) => a.id.localeCompare(b.id)),
+    [exchangesTable]
+  );
+
+  const tradingRulesOptions = useMemo(
+    () =>
+      (tradingRulesTable as any[])
+        .filter((o) => o.code)
+        .map((o) => ({ id: o.code, name: o.code })),
+    [tradingRulesTable]
   );
 
   const idxCode = String(params.idx ?? '');
@@ -258,9 +274,9 @@ export default function IndexModifyScreen() {
         <SelectField label="Level 2 End Trading Rules"   value={level2EndRules}   options={tradingRulesOptions} onChange={setLevel2EndRules} />
 
         <Field label="Level 3 Percentage" value={level3Percentage} onChange={setLevel3Percentage} keyboardType="numeric" />
-        <Field label="Level 3 Duration"   value={level3Duration}   onChange={setLevel3Duration}   keyboardType="numeric" />
-        <SelectField label="Level 3 Start Trading Rules" value={level3StartRules} options={tradingRulesOptions} onChange={setLevel3StartRules} />
-        <SelectField label="Level 3 End Trading Rules"   value={level3EndRules}   options={tradingRulesOptions} onChange={setLevel3EndRules} />
+        {/*<Field label="Level 3 Duration"   value={level3Duration}   onChange={setLevel3Duration}   keyboardType="numeric" />*/}
+        <SelectField label="Level 3 Trading Rules" value={level3StartRules} options={tradingRulesOptions} onChange={setLevel3StartRules} />
+        {/*<SelectField label="Level 3 End Trading Rules"   value={level3EndRules}   options={tradingRulesOptions} onChange={setLevel3EndRules} />*/}
 
         {error && <Text style={{ color: DarkTheme.negative, marginTop: 8 }}>{error}</Text>}
 

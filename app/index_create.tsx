@@ -254,9 +254,9 @@ export default function IndexCreateScreen() {
         <SelectField label="Level 2 End Trading Rules"   value={level2EndRules}   options={tradingRulesOptions} onChange={setLevel2EndRules} />
 
         <Field label="Level 3 Percentage" value={level3Percentage} onChange={setLevel3Percentage} keyboardType="numeric" />
-        <Field label="Level 3 Duration"   value={level3Duration}   onChange={setLevel3Duration}   keyboardType="numeric" />
-        <SelectField label="Level 3 Start Trading Rules" value={level3StartRules} options={tradingRulesOptions} onChange={setLevel3StartRules} />
-        <SelectField label="Level 3 End Trading Rules"   value={level3EndRules}   options={tradingRulesOptions} onChange={setLevel3EndRules} />
+        {/*<Field label="Level 3 Duration"   value={level3Duration}   onChange={setLevel3Duration}   keyboardType="numeric" />*/}
+        <SelectField label="Level 3 Trading Rules" value={level3StartRules} options={tradingRulesOptions} onChange={setLevel3StartRules} />
+        {/*<SelectField label="Level 3 End Trading Rules"   value={level3EndRules}   options={tradingRulesOptions} onChange={setLevel3EndRules} />*/}
 
         {error && <Text style={{ color: DarkTheme.negative, marginTop: 8 }}>{error}</Text>}
 
