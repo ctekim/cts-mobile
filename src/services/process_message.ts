@@ -1,79 +1,106 @@
 // src/services/process_message.ts
-import { Alert } from 'react-native';                 // replaces ShowError/ShowInfo
+import {
+   ADD_ROW,
+   ERROR_REPLY,
+   FORCE_CHANGE_PASSWORD,
+   GetFormattedTimestamp,
+   JSON_KEY_MESSAGE,
+   JSON_KEY_RESULTS_TYPE,
+   JSON_KEY_TIME,
+   RESULTS_TABLE,
+   RESULTS_TYPE_REPLY_ERROR,
+   ROLE_MARKET_CONTROLLER,
+   ROLE_MARKET_CONTROLLER_PERFORMANCE,
+   ROLE_MARKET_CONTROLLER_VIEWER,
+   ROLE_MARKET_CONTROLLER_VIEWER_PERFORMANCE,
+   ROLE_SUPER_CONTROLLER,
+   ROLE_SUPER_CONTROLLER_PERFORMANCE,
+   ROLE_TRADING_OPERATOR,
+   SUCCESS_REPLY
+} from '../common/common';
 import { DispatchTableEvent } from '../common/events'; // RN event bus
 import {
-  ERROR_REPLY, SUCCESS_REPLY,
-  JSON_KEY_RESULTS_TYPE, JSON_KEY_MESSAGE, RESULTS_TABLE,
-  ADD_ROW, JSON_KEY_TIME, GetFormattedTimestamp,
-  FORCE_CHANGE_PASSWORD,
-  RESULTS_TYPE_REPLY_ERROR,
-  ROLE_SUPER_CONTROLLER, ROLE_MARKET_CONTROLLER,
-  ROLE_MARKET_CONTROLLER_VIEWER, ROLE_SUPER_CONTROLLER_PERFORMANCE,
-  ROLE_MARKET_CONTROLLER_PERFORMANCE, ROLE_MARKET_CONTROLLER_VIEWER_PERFORMANCE,
-  ROLE_TRADING_OPERATOR,
-  FAILURE_BACKGROUND_COLOUR,
-} from '../common/common';
-import { TranslateErrorMessage } from '../common/error_codes.ts';
-import { HandleHoldingsReply, HandleNotificationsReply, HandleParticipantReply, HandleTradingAccountReply, HandleTradingRulesReply, HandleUserReply, HandleUsersOrdersReply, HandleUsersTradesReply, } from './transaction_messages';
+   MSG_TYPE_CHANGE_BACKUP,
+   MSG_TYPE_CHANGE_COORDINATOR,
+   MSG_TYPE_EXCHANGE_REPLY,
+   MSG_TYPE_HOLDINGS_ADJUST_BALANCES,
+   MSG_TYPE_HOLDINGS_CLEAR_TRADE,
+   MSG_TYPE_HOLDINGS_SEARCH_REQUEST,
+   MSG_TYPE_INDEX_MEMBERS_CREATE,
+   MSG_TYPE_INDEX_MEMBERS_MODIFY,
+   MSG_TYPE_INDEX_MEMBERS_REPLY,
+   MSG_TYPE_INDEX_MEMBERS_STATUS,
+   MSG_TYPE_INDICES_CREATE,
+   MSG_TYPE_INDICES_MODIFY,
+   MSG_TYPE_INDICES_REPLY,
+   MSG_TYPE_INDICES_STATUS,
+   MSG_TYPE_INSTRUMENT_CHANGE_STATUS,
+   MSG_TYPE_INSTRUMENT_CREATE,
+   MSG_TYPE_INSTRUMENT_MODIFY,
+   MSG_TYPE_MARKET_REPLY,
+   MSG_TYPE_ORDER_PAIR,
+   MSG_TYPE_ORDER_PAIR_REPLACE,
+   MSG_TYPE_ORDER_SEARCH_REQUEST,
+   MSG_TYPE_SPECIFIC_ORDERS_REPLY,
+   MSG_TYPE_SPECIFIC_TRADES_REPLY,
+   MSG_TYPE_TRADE_SEARCH_REQUEST,
+   MSG_TYPE_TRADING_EVENTS_MOVE_ALL,
+   MSG_TYPE_USER_FORCE_LOGOFF,
+   MSGTYPE_CHANGE_PASSWORD,
+   MSGTYPE_EXCHANGE_CANCEL_ALL_ORDERS,
+   MSGTYPE_EXCHANGE_CHANGE_STATUS,
+   MSGTYPE_EXCHANGE_CREATE,
+   MSGTYPE_EXCHANGE_MODIFY,
+   MSGTYPE_FIRM_CHANGE_STATUS, MSGTYPE_FIRM_CREATE, MSGTYPE_FIRM_MODIFY,
+   MSGTYPE_FORCE_LOGOFF,
+   MSGTYPE_HEARTBEAT,
+   MSGTYPE_HOLDINGS_CREATE,
+   MSGTYPE_HOLDINGS_MODIFY,
+   MSGTYPE_HOLDINGS_REPLY,
+   MSGTYPE_INDICES_FULL_ACCESS_REPLY,
+   MSGTYPE_INSTRUMENT_CANCEL_ALL_ORDERS,
+   MSGTYPE_INSTRUMENT_REPLY,
+   MSGTYPE_MARKET_CANCEL_ALL_ORDERS,
+   MSGTYPE_MARKET_CHANGE_STATUS,
+   MSGTYPE_MARKET_CREATE, MSGTYPE_MARKET_MODIFY,
+   MSGTYPE_NOTIFICATIONS_REPLY,
+   MSGTYPE_ORDER_AMEND, MSGTYPE_ORDER_CANCEL, MSGTYPE_ORDER_NEW,
+   MSGTYPE_ORDERBOOK_REPLY,
+   MSGTYPE_PARTICIPANT_CANCEL_ALL_ORDERS,
+   MSGTYPE_PARTICIPANT_REPLY,
+   MSGTYPE_PUBLIC_TRADES_REPLY,
+   MSGTYPE_SET_NEW_TIME,
+   MSGTYPE_TRADE_ENTRY,
+   MSGTYPE_TRADING_ACCOUNT_CANCEL_ALL_ORDERS,
+   MSGTYPE_TRADING_ACCOUNT_CHANGE_STATUS, MSGTYPE_TRADING_ACCOUNT_CREATE,
+   MSGTYPE_TRADING_ACCOUNT_MODIFY,
+   MSGTYPE_TRADING_ACCOUNT_REPLY,
+   MSGTYPE_TRADING_EVENT_CREATE,
+   MSGTYPE_TRADING_EVENT_MODIFY,
+   MSGTYPE_TRADING_EVENT_REPLY,
+   MSGTYPE_TRADING_EVENT_RUN,
+   MSGTYPE_TRADING_EVENT_STATUS,
+   MSGTYPE_TRADING_RULES_CREATE,
+   MSGTYPE_TRADING_RULES_MODIFY,
+   MSGTYPE_TRADING_RULES_REPLY,
+   MSGTYPE_TS_LOGOFF,
+   MSGTYPE_TS_LOGON,
+   MSGTYPE_USER_CANCEL_ALL_ORDERS,
+   MSGTYPE_USER_CHANGE_STATUS, MSGTYPE_USER_CREATE,
+   MSGTYPE_USER_MODIFY,
+   MSGTYPE_USER_PASSWORD,
+   MSGTYPE_USER_REPLY,
+   MSGTYPE_USERS_ORDERS_REPLY, MSGTYPE_USERS_TRADES_REPLY,
+} from '../common/msg_types';
 import { HandleExchangeReply, HandleIndexMembersReply, HandleIndicesReply, HandleInstrumentReply, HandleMarketReply, HandleOrderBookReply, HandlePublicTradesReply, HandleTradingEventReply, } from './datafeed_messages';
-import { MSG_TYPE_EXCHANGE_REPLY, MSG_TYPE_MARKET_REPLY, MSGTYPE_HEARTBEAT, MSGTYPE_INSTRUMENT_REPLY, MSGTYPE_ORDER_AMEND, MSGTYPE_ORDER_CANCEL, MSGTYPE_ORDER_NEW, 
-            MSGTYPE_ORDERBOOK_REPLY, MSGTYPE_PUBLIC_TRADES_REPLY, MSGTYPE_TRADING_EVENT_REPLY, MSGTYPE_TS_LOGOFF, 
-            MSGTYPE_TRADING_ACCOUNT_REPLY, MSGTYPE_USERS_ORDERS_REPLY, MSGTYPE_USERS_TRADES_REPLY, MSGTYPE_USER_REPLY, MSGTYPE_HOLDINGS_REPLY, 
-            MSGTYPE_NOTIFICATIONS_REPLY, MSGTYPE_TS_LOGON,  MSGTYPE_USER_CHANGE_STATUS, MSGTYPE_USER_CREATE, 
-            MSGTYPE_USER_MODIFY, MSGTYPE_PARTICIPANT_REPLY, MSGTYPE_TRADING_RULES_REPLY, MSGTYPE_USER_PASSWORD,
-            MSGTYPE_FIRM_CHANGE_STATUS, MSGTYPE_FIRM_CREATE, MSGTYPE_FIRM_MODIFY, 
-            MSG_TYPE_INSTRUMENT_MODIFY, MSG_TYPE_INSTRUMENT_CREATE, 
-            MSGTYPE_TRADING_ACCOUNT_CHANGE_STATUS, MSGTYPE_TRADING_ACCOUNT_CREATE,
-            MSGTYPE_TRADING_ACCOUNT_MODIFY, MSG_TYPE_INSTRUMENT_CHANGE_STATUS,
-            MSGTYPE_EXCHANGE_MODIFY, MSGTYPE_EXCHANGE_CREATE, MSGTYPE_EXCHANGE_CHANGE_STATUS, MSGTYPE_MARKET_CHANGE_STATUS,
-            MSGTYPE_MARKET_CREATE, MSGTYPE_MARKET_MODIFY,
-            MSGTYPE_TRADING_EVENT_STATUS,
-            MSGTYPE_TRADING_EVENT_CREATE,
-            MSGTYPE_TRADING_EVENT_MODIFY,
-            MSGTYPE_TRADING_EVENT_RUN,
-            MSGTYPE_CHANGE_PASSWORD,
-            MSGTYPE_FORCE_LOGOFF,
-            MSG_TYPE_INDEX_MEMBERS_REPLY,
-            MSG_TYPE_INDICES_REPLY,
-            MSG_TYPE_INDICES_STATUS,
-            MSG_TYPE_INDICES_CREATE,
-            MSG_TYPE_INDICES_MODIFY,
-            MSG_TYPE_INDEX_MEMBERS_STATUS,
-            MSG_TYPE_INDEX_MEMBERS_CREATE,
-            MSG_TYPE_INDEX_MEMBERS_MODIFY,
-            MSGTYPE_HOLDINGS_CREATE,
-            MSGTYPE_HOLDINGS_MODIFY,
-            MSGTYPE_TRADING_RULES_MODIFY,
-            MSGTYPE_TRADING_RULES_CREATE,
-            MSGTYPE_SET_NEW_TIME,
-            MSGTYPE_TRADE_ENTRY,
-            MSGTYPE_INDICES_FULL_ACCESS_REPLY,
-            MSG_TYPE_HOLDINGS_CLEAR_TRADE,
-            MSG_TYPE_HOLDINGS_ADJUST_BALANCES,
-            MSGTYPE_EXCHANGE_CANCEL_ALL_ORDERS,
-            MSGTYPE_MARKET_CANCEL_ALL_ORDERS,
-            MSGTYPE_PARTICIPANT_CANCEL_ALL_ORDERS,
-            MSGTYPE_USER_CANCEL_ALL_ORDERS,
-            MSGTYPE_TRADING_ACCOUNT_CANCEL_ALL_ORDERS,
-            MSGTYPE_INSTRUMENT_CANCEL_ALL_ORDERS,
-            MSG_TYPE_SPECIFIC_TRADES_REPLY,
-            MSG_TYPE_SPECIFIC_ORDERS_REPLY,
-            MSG_TYPE_ORDER_SEARCH_REQUEST,
-            MSG_TYPE_TRADE_SEARCH_REQUEST,
-            MSG_TYPE_HOLDINGS_SEARCH_REQUEST,
-            MSG_TYPE_TRADING_EVENTS_MOVE_ALL,
-            MSG_TYPE_ORDER_PAIR,
-            MSG_TYPE_ORDER_PAIR_REPLACE,
-            MSG_TYPE_CHANGE_BACKUP,
-            MSG_TYPE_CHANGE_COORDINATOR,
-            MSG_TYPE_USER_FORCE_LOGOFF,
-        } from '../common/msg_types';
+import { HandleHoldingsReply, HandleNotificationsReply, HandleParticipantReply, HandleTradingAccountReply, HandleTradingRulesReply, HandleUserReply, HandleUsersOrdersReply, HandleUsersTradesReply, } from './transaction_messages';
 
-import { resetGlobals, selectForcePasswordChange, setForcePasswordChange, setIsMarketController, setRoleId, setSeqNum, setTSConnected} from '..//redux/globalsSlice';
-import { closeTSConnection } from './ts_connection';
+import { TranslateErrorMessage } from '@/common/error_codes';
 import { Dispatch } from '@reduxjs/toolkit';
+import { resetGlobals, setForcePasswordChange, setIsMarketController, setRoleId, setSeqNum, setTSConnected } from '..//redux/globalsSlice';
 import { showResult } from '../redux/notificationSlice';
 import { store } from '../redux/store';
+import { closeTSConnection } from './ts_connection';
 
 export interface ProcessCallbacks {
   onLogonSuccess: (seq: number, roleId: number, forceChangePassword: boolean) => void;
@@ -469,19 +496,30 @@ export function ProcessMessage(
          case MSGTYPE_HEARTBEAT:
          break;
 
-         case ERROR_REPLY:
-            DispatchTableEvent(ADD_ROW, RESULTS_TABLE, {
+         case ERROR_REPLY: {
+            console.log('[ERROR_REPLY] ec=', json_message.ec, 'in=', json_message.in, 'msg=', json_message.message);
+            const code = Number(json_message.ec);
+            const translated = Number.isFinite(code)
+               ? TranslateErrorMessage(code)
+               : (json_message.message || json_message.tx || 'Server rejected the request');
+
+            // Primary: toast (matches how success is shown, survives navigation)
+            dispatch(showResult({
+               type: 'error',
+               message: translated,
+               time: GetFormattedTimestamp(),
+            }));
+
+            // Optional: still record it in the Results table if that screen exists on mobile
+            result = {
                [JSON_KEY_TIME]: GetFormattedTimestamp(),
-               [JSON_KEY_MESSAGE]:
-                  `Error in seq ${json_message.in}, code: ` +
-                  `${TranslateErrorMessage(Number(json_message.ec))} (${json_message.ec})`,
+               [JSON_KEY_MESSAGE]: `Error, in sequence number: ${json_message.in}, error code: ${translated} (${code})`,
                [JSON_KEY_RESULTS_TYPE]: RESULTS_TYPE_REPLY_ERROR,
-            });
-            ShowError(TranslateErrorMessage(json_message.ec), true);
-            if (json_message.orig_m_type === MSGTYPE_TS_LOGON) {
-               onLogonResult('failed');
-            }
-         break;
+            };
+            DispatchTableEvent(ADD_ROW, RESULTS_TABLE, result);
+
+            break;
+         }
 
          default:
          // console.log('Unknown m_type:', json_message.m_type);

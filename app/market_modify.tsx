@@ -52,6 +52,8 @@ export default function MarketModifyScreen() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  const [endTime, setEndTime] = useState('');
+
   const exchangeOptions = useMemo(
     () =>
       (exchanges as any[])
@@ -72,6 +74,8 @@ export default function MarketModifyScreen() {
     if (!code) return setValidationError('No market selected.');
     if (!description.trim()) return setValidationError('Description is missing.');
     if (!exchange) return setValidationError('Exchange is missing.');
+    if (endTime !== '' && (isNaN(Number(endTime)) || String(endTime).length > 6))
+      return setValidationError('End Time must be 1–6 digits (HHMMSS).');
     setConfirmOpen(true);
   };
 
@@ -97,6 +101,8 @@ export default function MarketModifyScreen() {
         level3Duration:   level3Duration   === '' ? null : Number(level3Duration),
         level3StartRules: level3StartRules === DROPDOWN_LIST_NONE ? null : level3StartRules,
         level3EndRules:   level3EndRules   === DROPDOWN_LIST_NONE ? null : level3EndRules,
+
+        time: endTime === '' ? null : Number(endTime),
       },
     );
     setConfirmOpen(false);
@@ -126,6 +132,8 @@ export default function MarketModifyScreen() {
     setLevel3Duration(existing['3_dur'] != null ? String(existing['3_dur']) : '');
     setLevel3StartRules(existing['3_str'] ?? DROPDOWN_LIST_NONE);
     setLevel3EndRules(existing['3_end'] ?? DROPDOWN_LIST_NONE);
+
+    setEndTime((existing?.time ?? '').toString().replace(/:/g, ''));
   }, [existing]);
 
   return (
@@ -219,6 +227,12 @@ export default function MarketModifyScreen() {
           placeholder="Select Trading Rules"
         />*/}
 
+        <NumberField
+          label="End Time (HHMMSS)"
+          value={endTime}
+          onChange={(v) => setEndTime(String(v).replace(/[^\d]/g, '').slice(0, 6))}
+        />
+        
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.button, { backgroundColor: DarkTheme.surface, borderColor: DarkTheme.cellBorder, borderWidth: 1 }]}

@@ -22,6 +22,7 @@ import {
   JSON_KEY_PRICE_DECIMALS,
   JSON_KEY_STATUS,
   JSON_KEY_SUBMITTER,
+  JSON_KEY_TIME,
   JSON_KEY_VALIDATE_ORDERS,
   STATUS_ACTIVE,
   SUSPEND,
@@ -79,6 +80,7 @@ export interface IndexFormPayload {
   submitter?: string;
 
   exchange?: string | null;
+  time?: number | null;  
 
   level1Percentage?: number | null;
   level1Duration?: number | null;
@@ -109,6 +111,10 @@ function buildIndexPayload(p: IndexFormPayload, messageType: number): Record<str
 
   if (p.exchange != null) {
     payload[JSON_KEY_EXCHANGE] = p.exchange;
+  }
+
+  if (p.time != null) {
+    payload[JSON_KEY_TIME] = p.time;
   }
 
   const addLevel = (

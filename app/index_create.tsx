@@ -77,6 +77,7 @@ export default function IndexCreateScreen() {
   const [level3Duration, setLevel3Duration]     = useState('');
   const [level3StartRules, setLevel3StartRules] = useState<string>(DROPDOWN_LIST_NONE);
   const [level3EndRules, setLevel3EndRules]     = useState<string>(DROPDOWN_LIST_NONE);
+  const [endTime, setEndTime] = useState('');
 
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
@@ -122,6 +123,7 @@ export default function IndexCreateScreen() {
     setLevel3Duration(src['3_dur'] != null ? String(src['3_dur']) : '');
     setLevel3StartRules(src['3_str'] ?? DROPDOWN_LIST_NONE);
     setLevel3EndRules(src['3_end'] ?? DROPDOWN_LIST_NONE);
+    setEndTime((src?.time ?? '').toString().replace(/:/g, ''));
   }, [sourceIdx, indicesTable]);
 
   useEffect(() => {
@@ -136,6 +138,8 @@ export default function IndexCreateScreen() {
     if (value === '' || isNaN(Number(value))) return 'Value is required';
     if (minValue !== '' && isNaN(Number(minValue))) return 'Min Trade Value must be a number';
     if (maxValue !== '' && isNaN(Number(maxValue))) return 'Max Trade Value must be a number';
+    if (endTime !== '' && (isNaN(Number(endTime)) || String(endTime).length > 6))
+      return 'End Time must be 1–6 digits (HHMMSS)';
     return null;
   };
 
@@ -183,6 +187,7 @@ export default function IndexCreateScreen() {
       level3Duration:   level3Duration   === '' ? null : Number(level3Duration),
       level3StartRules: level3StartRules === DROPDOWN_LIST_NONE ? null : level3StartRules,
       level3EndRules:   level3EndRules   === DROPDOWN_LIST_NONE ? null : level3EndRules,
+      time: endTime === '' ? null : Number(endTime),
     });
     if (!ok) console.warn('[index_create] not connected');
     setConfirm(false);
@@ -258,6 +263,13 @@ export default function IndexCreateScreen() {
         <SelectField label="Level 3 Trading Rules" value={level3StartRules} options={tradingRulesOptions} onChange={setLevel3StartRules} />
         {/*<SelectField label="Level 3 End Trading Rules"   value={level3EndRules}   options={tradingRulesOptions} onChange={setLevel3EndRules} />*/}
 
+        <Field
+          label="End Time (HHMMSS)"
+          value={endTime}
+          onChange={(v) => setEndTime(String(v).replace(/[^\d]/g, '').slice(0, 6))}
+          keyboardType="number-pad"
+        />
+        
         {error && <Text style={{ color: DarkTheme.negative, marginTop: 8 }}>{error}</Text>}
 
         <TouchableOpacity

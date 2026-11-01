@@ -1,37 +1,37 @@
 // app/index.tsx
+import * as LocalAuthentication from 'expo-local-authentication';
+import { useRouter } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, ImageBackground, KeyboardAvoidingView,
   Platform, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import * as LocalAuthentication from 'expo-local-authentication';
-import * as SecureStore from 'expo-secure-store';
 
-import { MSGTYPE_HEARTBEAT, MSGTYPE_TS_LOGON, } from '../src/common/msg_types';
 import {
+  DEFAULT_TRANSACTION_URL,
   JSON_KEY_BROWSER_SESSION_ID, JSON_KEY_IN_SEQ, JSON_KEY_MESSAGE_TYPE,
-  JSON_KEY_PASSWORD, JSON_KEY_SUBMITTER, JSON_KEY_TEST_ID, JSON_KEY_USER, DEFAULT_TRANSACTION_URL
+  JSON_KEY_PASSWORD, JSON_KEY_SUBMITTER, JSON_KEY_TEST_ID, JSON_KEY_USER
 } from '../src/common/common';
+import { MSGTYPE_HEARTBEAT, MSGTYPE_TS_LOGON, } from '../src/common/msg_types';
 
+import { AppState } from 'react-native';
+import { ConfirmDialog } from '../src/components/ConfirmDialog';
+import { selectForcePasswordChange, setBSId, setTSUserId } from '../src/redux/globalsSlice';
+import { useAppSelector } from '../src/redux/hooks';
 import { store } from '../src/redux/store';
+import { startBackgroundService, stopBackgroundService } from '../src/services/background_service';
 import { ProcessMessage } from '../src/services/process_message';
 import {
   registerCloseHandler,
   registerForegroundHandler,
 } from '../src/services/ts_connection';
-import { setTSUserId, setBSId, selectForcePasswordChange } from '../src/redux/globalsSlice';
 import {
-  setWs,
-  setHeartbeat,
   getWs,
-  isSocketStale,
   markServerMessageReceived,
+  setHeartbeat,
+  setWs
 } from '../src/services/ws_state';
-import { useAppSelector } from '../src/redux/hooks';
-import { ConfirmDialog } from '../src/components/ConfirmDialog';
-import { AppState } from 'react-native';
-import { startBackgroundService, stopBackgroundService } from '../src/services/background_service';
 
 // const DEFAULT_TRANSACTION_URL = 'wss://cts-markets.duckdns.org/ws';
 const HEARTBEAT_INTERVAL = 20000;
@@ -307,12 +307,12 @@ export default function HomeScreen() {
     ws.onmessage = (event) => {
       try {
         const json = JSON.parse(event.data);
+        // console.log('[WS rx]', event.data, 'loggedOn =', loggedOn, 'm_type =', json?.m_type);
 
-        // Any error reply before login completes = logon failure.
-        // The server's error message has no orig_m_type, so we can't
-        // distinguish by request type — but during login there is
-        // nothing else an error could be about.
-        if (json.m_type === 999 && !loggedOn) {
+        // Only treat 999 as a logon failure BEFORE we've connected.
+        const { tsConnected, isMarketController } = store.getState().globals;
+
+        if (json.m_type === 999 && !tsConnected) {
           setConnecting(false);
           setStatus('Logon failed');
           setAlertDialog({
@@ -323,7 +323,6 @@ export default function HomeScreen() {
           return;
         }
 
-        const { isMarketController } = store.getState().globals;
         ProcessMessage(
           json,
           store.dispatch,

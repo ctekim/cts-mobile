@@ -48,6 +48,7 @@ export default function MarketCreateScreen() {
   const [level3Duration, setLevel3Duration]     = useState('');
   const [level3StartRules, setLevel3StartRules] = useState<string>(DROPDOWN_LIST_NONE);
   const [level3EndRules, setLevel3EndRules]     = useState<string>(DROPDOWN_LIST_NONE);
+  const [endTime, setEndTime] = useState('');
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -90,12 +91,16 @@ export default function MarketCreateScreen() {
     setLevel3Duration(src['3_dur'] != null ? String(src['3_dur']) : '');
     setLevel3StartRules(src['3_str'] ?? DROPDOWN_LIST_NONE);
     setLevel3EndRules(src['3_end'] ?? DROPDOWN_LIST_NONE);
+    setEndTime((src?.time ?? '').toString().replace(/:/g, ''));
+
   }, [sourceCode, markets]);
 
   const onSubmit = () => {
     if (!code.trim()) return setValidationError('Code is missing.');
     if (!description.trim()) return setValidationError('Description is missing.');
     if (!exchange) return setValidationError('Exchange is missing.');
+    if (endTime !== '' && (isNaN(Number(endTime)) || String(endTime).length > 6))
+      return setValidationError('End Time must be 1–6 digits (HHMMSS).');
     setConfirmOpen(true);
   };
 
@@ -120,6 +125,7 @@ export default function MarketCreateScreen() {
         level3Duration:   level3Duration   === '' ? null : Number(level3Duration),
         level3StartRules: level3StartRules === DROPDOWN_LIST_NONE ? null : level3StartRules,
         level3EndRules:   level3EndRules   === DROPDOWN_LIST_NONE ? null : level3EndRules,
+        time: endTime === '' ? null : Number(endTime),
       },
     );
     setConfirmOpen(false);
@@ -223,6 +229,12 @@ export default function MarketCreateScreen() {
           placeholder="Select Trading Rules"
         />*/}
 
+        <NumberField
+          label="End Time (HHMMSS)"
+          value={endTime}
+          onChange={(v) => setEndTime(String(v).replace(/[^\d]/g, '').slice(0, 6))}
+        />
+        
         <View style={styles.actions}>
           <TouchableOpacity
             style={[styles.button, { backgroundColor: DarkTheme.surface, borderColor: DarkTheme.cellBorder, borderWidth: 1 }]}

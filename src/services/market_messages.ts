@@ -17,6 +17,7 @@ import {
   JSON_KEY_MARKET,
   JSON_KEY_MESSAGE_TYPE,
   JSON_KEY_STATUS,
+  JSON_KEY_TIME,
   JSON_KEY_WITHDRAW_ALL_ORDERS,
 } from '../common/common';
 import {
@@ -42,6 +43,7 @@ export interface CircuitBreakerPayload {
   level3Duration?: number | null;
   level3StartRules?: string | null;
   level3EndRules?: string | null;
+  time?: number | null; 
 }
 
 function circuitBreakerKeys(p: CircuitBreakerPayload): Record<string, any> {
@@ -81,6 +83,8 @@ function circuitBreakerKeys(p: CircuitBreakerPayload): Record<string, any> {
     startRules: JSON_KEY_LEVEL3_START_TRADING_RULES_CODE,
     endRules:   JSON_KEY_LEVEL3_END_TRADING_RULES_CODE,
   });
+
+  if (p.time != null) out[JSON_KEY_TIME] = p.time;
 
   return out;
 }
