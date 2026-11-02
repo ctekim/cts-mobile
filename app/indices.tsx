@@ -44,6 +44,14 @@ const COLUMNS: ColumnDef[] = [
 ];
 
 const ADMIN_COLUMNS: ColumnDef[] = [
+
+  { key: 'price_dec',   label: 'Decimals',    width: 100, format: 'price' },
+  { key: 'div',   label: 'Divisor',    width: 100, format: 'price' },
+  { key: 'ref',   label: 'Reference',    width: 100, format: 'price' },
+  { key: 'val_ord',   label: 'Validate',    width: 100, format: 'yn' },
+  { key: 'min',   label: 'Min',    width: 100, format: 'price' },
+  { key: 'max',   label: 'Max',    width: 100, format: 'price' },
+
   { key: 'exch',   label: 'Exchange',    width: 100, format: 'text' },
 
   { key: '1_per',  label: 'Lvl 1 %',     width: 70,  format: 'text' },

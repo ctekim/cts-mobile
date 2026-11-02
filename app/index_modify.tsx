@@ -14,9 +14,9 @@ import {
   View,
 } from 'react-native';
 import {
-  ConvertFromTradingRulesValueName,
   DROPDOWN_LIST_NONE,
   STATUS_ACTIVE,
+  stripAndNum,
   SUSPEND, SUSPENDED
 } from '../src/common/common';
 import { DarkTheme } from '../src/common/theme';
@@ -93,6 +93,7 @@ export default function IndexModifyScreen() {
 
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
+  const [referenceValue, setReferenceValue] = useState('');
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -111,8 +112,13 @@ export default function IndexModifyScreen() {
     setValue(row.price != null ? String(row.price) : '');
     setMinValue(row.min != null ? String(row.min) : '');
     setMaxValue(row.max != null ? String(row.max) : '');
+    setReferenceValue(
+      row.ref != null
+        ? String(Number(row.ref) / Math.pow(10, Number(row.price_dec ?? 0)))
+        : ''
+    );
     setValidateOrders(
-      ConvertFromTradingRulesValueName(row.val_ord) === 'Y' ? 'Y' : 'N',
+      String(row.val_ord).toUpperCase() === 'Y' || String(row.val_ord) === '1' ? 'Y' : 'N'
     );
 
     setExchange(row.exch ?? DROPDOWN_LIST_NONE);
@@ -142,6 +148,7 @@ export default function IndexModifyScreen() {
     if (value === '' || isNaN(Number(value))) return 'Value is required';
     if (minValue !== '' && isNaN(Number(minValue))) return 'Min Trade Value must be a number';
     if (maxValue !== '' && isNaN(Number(maxValue))) return 'Max Trade Value must be a number';
+    if (!referenceValue.trim()) return 'Reference Value is required';
     if (endTime !== '' && (isNaN(Number(endTime)) || String(endTime).length > 6))
       return 'End Time must be 1–6 digits (HHMMSS)';
     return null;
@@ -164,6 +171,10 @@ export default function IndexModifyScreen() {
     const scaledMin = minValue !== '' ? Math.round(parseFloat(minValue) * factor) : undefined;
     const scaledMax = maxValue !== '' ? Math.round(parseFloat(maxValue) * factor) : undefined;
 
+    // scale reference value the same way (strip commas first!)
+    const refNum = stripAndNum(referenceValue);
+    const scaledRef = !Number.isNaN(refNum) ? Math.round(refNum * factor) : undefined;
+
     const ok = sendIndexModify({
       code: String(row.idx),
       description: description.trim(),
@@ -173,6 +184,7 @@ export default function IndexModifyScreen() {
       status: String(row.status ?? '').toUpperCase() === 'A' ? STATUS_ACTIVE : (SUSPEND ?? SUSPENDED),
       min: scaledMin,
       max: scaledMax,
+      referenceValue: scaledRef, 
       submitter,
 
       exchange: exchange === DROPDOWN_LIST_NONE ? null : exchange,
@@ -235,6 +247,7 @@ export default function IndexModifyScreen() {
         <Field label="Value" value={value} onChange={setValue} keyboardType="numeric" />
         <Field label="Min Trade Value" value={minValue} onChange={setMinValue} keyboardType="numeric" />
         <Field label="Max Trade Value" value={maxValue} onChange={setMaxValue} keyboardType="numeric" />
+        <Field label="Reference Value" value={referenceValue} onChange={setReferenceValue} keyboardType="numeric" />
 
         <Text style={[styles.label, { color: DarkTheme.textMuted }]}>Validate Orders</Text>
         <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>

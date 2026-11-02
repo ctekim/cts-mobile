@@ -1773,11 +1773,14 @@ export function ConvertToTradingAccountTypeId(type: string) {
 //   }
 // }
 
-// // Helper: Remove commas and return Number or NaN
-// export const stripAndNum = (v) => {
-//   if (v === null || v === undefined || v === "") return NaN;
-//   return Number(String(v).replace(/,/g, "").trim());
-// };
+// Returns a number, or NaN if the value is missing / not a valid number.
+// Strips thousands-separator commas before parsing.
+export const stripAndNum = (v: unknown): number => {
+  if (v === null || v === undefined) return NaN;
+  const s = String(v).replace(/,/g, "").trim();
+  if (s === "") return NaN;
+  return Number(s);
+};
 
 // // Heuristic parser: returns a real decimal number (not scaled integer)
 // // - If string contains '.', treat as decimal and parse directly.

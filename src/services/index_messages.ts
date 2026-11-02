@@ -20,6 +20,7 @@ import {
   JSON_KEY_MININMUM_VALUE,
   JSON_KEY_PRICE,
   JSON_KEY_PRICE_DECIMALS,
+  JSON_KEY_REFERENCE_PRICE,
   JSON_KEY_STATUS,
   JSON_KEY_SUBMITTER,
   JSON_KEY_TIME,
@@ -77,6 +78,7 @@ export interface IndexFormPayload {
   status: any;
   min?: number;
   max?: number;
+  referenceValue?: string | number | null;  
   submitter?: string;
 
   exchange?: string | null;
@@ -105,7 +107,7 @@ function buildIndexPayload(p: IndexFormPayload, messageType: number): Record<str
     [JSON_KEY_DESCRIPTION]: p.description,
     [JSON_KEY_PRICE]: p.price,
     [JSON_KEY_PRICE_DECIMALS]: p.priceDecimals,
-    [JSON_KEY_VALIDATE_ORDERS]: p.validateOrders,
+    [JSON_KEY_VALIDATE_ORDERS]: p.validateOrders === 'Y' ? 'Y' : 'N',
     [JSON_KEY_STATUS]: p.status,
   };
 
@@ -115,6 +117,10 @@ function buildIndexPayload(p: IndexFormPayload, messageType: number): Record<str
 
   if (p.time != null) {
     payload[JSON_KEY_TIME] = p.time;
+  }
+
+  if (typeof p.referenceValue === 'number' && Number.isFinite(p.referenceValue)) {
+    payload[JSON_KEY_REFERENCE_PRICE] = p.referenceValue;
   }
 
   const addLevel = (

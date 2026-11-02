@@ -78,7 +78,8 @@ export default function IndexCreateScreen() {
   const [level3StartRules, setLevel3StartRules] = useState<string>(DROPDOWN_LIST_NONE);
   const [level3EndRules, setLevel3EndRules]     = useState<string>(DROPDOWN_LIST_NONE);
   const [endTime, setEndTime] = useState('');
-
+  const [referenceValue, setReferenceValue] = useState('');
+  
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
 
@@ -104,8 +105,9 @@ export default function IndexCreateScreen() {
     setValue(src.price != null ? String(src.price) : '');
     setMinValue(src.min != null ? String(src.min) : '');
     setMaxValue(src.max != null ? String(src.max) : '');
+    setReferenceValue(src.ref != null ? String(Number(src.ref) / Math.pow(10, Number(src.price_dec ?? 0))) : '');
     setValidateOrders(
-      src.val_ord === 'Y' ? 'Y' : 'N',
+      String(src.val_ord).toUpperCase() === 'Y' || String(src.val_ord) === '1' ? 'Y' : 'N'
     );
     setExchange(src.exch ?? DROPDOWN_LIST_NONE);
 
@@ -138,6 +140,7 @@ export default function IndexCreateScreen() {
     if (value === '' || isNaN(Number(value))) return 'Value is required';
     if (minValue !== '' && isNaN(Number(minValue))) return 'Min Trade Value must be a number';
     if (maxValue !== '' && isNaN(Number(maxValue))) return 'Max Trade Value must be a number';
+    if (!referenceValue.trim()) return 'Reference Value is required';
     if (endTime !== '' && (isNaN(Number(endTime)) || String(endTime).length > 6))
       return 'End Time must be 1–6 digits (HHMMSS)';
     return null;
@@ -169,6 +172,7 @@ export default function IndexCreateScreen() {
       status: defaultStatus,
       min: scaledMin,
       max: scaledMax,
+      referenceValue, 
       submitter,
 
       exchange: exchange === DROPDOWN_LIST_NONE ? null : exchange,
@@ -214,6 +218,7 @@ export default function IndexCreateScreen() {
         <Field label="Value" value={value} onChange={setValue} keyboardType="numeric" />
         <Field label="Min Trade Value" value={minValue} onChange={setMinValue} keyboardType="numeric" />
         <Field label="Max Trade Value" value={maxValue} onChange={setMaxValue} keyboardType="numeric" />
+        <Field label="Reference Value" value={referenceValue} onChange={setReferenceValue} keyboardType="numeric" />
 
         <Text style={[styles.label, { color: DarkTheme.textMuted }]}>Validate Orders</Text>
         <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>
