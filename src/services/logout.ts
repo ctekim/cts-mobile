@@ -1,8 +1,4 @@
 // src/services/logout.ts
-import { store } from '../redux/store';
-import { resetGlobals } from '../redux/globalsSlice';
-import { closeSocket, getWs } from './ws_state';
-import { MSGTYPE_TS_LOGOFF } from '../common/msg_types';
 import {
   JSON_KEY_BROWSER_SESSION_ID,
   JSON_KEY_IN_SEQ,
@@ -10,8 +6,13 @@ import {
   JSON_KEY_SUBMITTER,
   JSON_KEY_USER,
 } from '../common/common';
+import { MSGTYPE_TS_LOGOFF } from '../common/msg_types';
+import { resetGlobals } from '../redux/globalsSlice';
+import { store } from '../redux/store';
+import { closeSocket, getWs, markIntentionalClose } from './ws_state';
 
 export function handleLogout() {
+  markIntentionalClose();  
   const ws = getWs();
   const { userId, seqNum, bsid } = store.getState().globals;
 

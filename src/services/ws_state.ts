@@ -2,6 +2,17 @@
 let ws: WebSocket | null = null;
 let heartbeat: ReturnType<typeof setInterval> | null = null;
 let lastServerMessageAt = 0;
+let intentionalCloseFlag = false;
+
+export function markIntentionalClose() {
+  intentionalCloseFlag = true;
+}
+
+export function consumeIntentionalClose(): boolean {
+  const v = intentionalCloseFlag;
+  intentionalCloseFlag = false;
+  return v;
+}
 
 export function setWs(socket: WebSocket | null) {
   ws = socket;

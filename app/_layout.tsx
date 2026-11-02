@@ -1,18 +1,17 @@
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { Stack, useRouter } from 'expo-router';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
 import * as SplashScreen from 'expo-splash-screen';
-import { AppState, useColorScheme, View, Text, ScrollView, StyleSheet } from 'react-native';
-import { useEffect, useState, useRef } from 'react';
-import { Provider } from 'react-redux';
-import { Stack } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { AppState, StyleSheet, useColorScheme, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { store } from '../src/redux/store';
-import { ResultToast } from '../src/components/ResultToast';
-import { handleAppForeground } from '../src/services/ts_connection';
-import { useRouter } from 'expo-router';
+import { Provider } from 'react-redux';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
+import { ResultToast } from '../src/components/ResultToast';
+import { store } from '../src/redux/store';
+import { onConnectionLost } from '../src/services/connection_lost';
 import { installLogoutDialog } from '../src/services/logout_coordinator';
-import { handleLogout } from '../src/services/logout';
+import { handleAppForeground } from '../src/services/ts_connection';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -22,6 +21,11 @@ export default function RootLayout() {
   const bufRef = useRef<string[]>([]);
   const router = useRouter();
   const [logoutPrompt, setLogoutPrompt] = useState<null | ((ok: boolean) => void)>(null);
+  const [connectionLost, setConnectionLost] = useState<{ code: number; reason: string } | null>(null);
+
+  useEffect(() => {
+    return onConnectionLost((info) => setConnectionLost(info));
+  }, []);
 
   useEffect(() => {
     installLogoutDialog((onResolve) => {
@@ -119,6 +123,34 @@ export default function RootLayout() {
                   cb?.(false);
                 }}
               />
+              {connectionLost && (
+                <ConfirmDialog
+                  visible={true}
+                  title="Connection Lost"
+                  message={
+                    'The connection to the trading server was lost.\n\n' +
+                    'The server may be down or your network changed. Please sign in again.\n\n' +
+                    `(${connectionLost.code}${connectionLost.reason ? `: ${connectionLost.reason}` : ''})`
+                  }
+                  variant="error"
+                  accentColor="#e06060"
+                  actions={[
+                    {
+                      label: 'OK',
+                      style: 'default',
+                      onPress: () => {
+                        setConnectionLost(null);
+                        router.replace('/');
+                      },
+                    },
+                  ]}
+                  onClose={() => {
+                    setConnectionLost(null);
+                    router.replace('/');
+                  }}
+                />
+              )}
+
             </View>
           </ThemeProvider>
         </BottomSheetModalProvider>

@@ -17,21 +17,18 @@ import { MSGTYPE_HEARTBEAT, MSGTYPE_TS_LOGON, } from '../src/common/msg_types';
 
 import { AppState } from 'react-native';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
-import { selectForcePasswordChange, setBSId, setTSUserId } from '../src/redux/globalsSlice';
+import { selectForcePasswordChange, setBSId, setTSConnected, setTSUserId } from '../src/redux/globalsSlice';
 import { useAppSelector } from '../src/redux/hooks';
 import { store } from '../src/redux/store';
 import { startBackgroundService, stopBackgroundService } from '../src/services/background_service';
+import { reportConnectionLost } from '../src/services/connection_lost';
 import { ProcessMessage } from '../src/services/process_message';
 import {
   registerCloseHandler,
   registerForegroundHandler,
 } from '../src/services/ts_connection';
-import {
-  getWs,
-  markServerMessageReceived,
-  setHeartbeat,
-  setWs
-} from '../src/services/ws_state';
+import { consumeIntentionalClose, getWs, markIntentionalClose, markServerMessageReceived, setHeartbeat, setWs } from '../src/services/ws_state';
+
 
 // const DEFAULT_TRANSACTION_URL = 'wss://cts-markets.duckdns.org/ws';
 const HEARTBEAT_INTERVAL = 20000;
@@ -172,7 +169,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     registerForegroundHandler(() => {
-      console.log('[app] foreground reconnect check');
+      // console.log('[app] foreground reconnect check');
 
       const creds = lastCredsRef.current;
 
@@ -236,6 +233,7 @@ export default function HomeScreen() {
     const existing = wsRef.current;
     if (existing && (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)) {
       console.log('[WS] closing existing socket before new login');
+      markIntentionalClose();
       existing.onclose = null;
       existing.onerror = null;
       existing.onmessage = null;
@@ -259,6 +257,7 @@ export default function HomeScreen() {
     setWs(ws);
 
     registerCloseHandler(() => {
+      markIntentionalClose();    
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
       if (ws.readyState === WebSocket.OPEN) ws.close();
       setStatus('Logged out by server');
@@ -361,14 +360,32 @@ export default function HomeScreen() {
 
     ws.onclose = (e: CloseEvent) => {
       console.log('[WS CLOSED]', e.code, e.reason, 'wasClean:', e.wasClean);
-      console.log('[WS] onclose — code:', e.code, 'reason:', e.reason);
       loginInProgress = false;
       stopBackgroundService();
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+
+      const wasIntentional = consumeIntentionalClose();
+
       setStatus('Disconnected');
       setConnecting(false);
       setLoggedOn(false);
+      store.dispatch(setTSConnected(false));
+
+      if (!wasIntentional) {
+        reportConnectionLost(e.code, e.reason ?? '');
+      }
     };
+
+    // ws.onclose = (e: CloseEvent) => {
+    //   console.log('[WS CLOSED]', e.code, e.reason, 'wasClean:', e.wasClean);
+    //   console.log('[WS] onclose — code:', e.code, 'reason:', e.reason);
+    //   loginInProgress = false;
+    //   stopBackgroundService();
+    //   if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+    //   setStatus('Disconnected');
+    //   setConnecting(false);
+    //   setLoggedOn(false);
+    // };
   }
 
   // ---------- manual login button ----------
@@ -615,6 +632,7 @@ export default function HomeScreen() {
           onClose={() => setBioPrompt(null)}
         />
       )}
+
     </ImageBackground>
   );
 }
