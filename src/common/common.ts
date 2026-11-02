@@ -1782,6 +1782,13 @@ export const stripAndNum = (v: unknown): number => {
   return Number(s);
 };
 
+// 100067 with dec=2 -> "1000.67"; 100000 with dec=2 -> "1000.00"
+export const toDisplayPrice = (scaled: number | null | undefined, dec: number | null | undefined): string => {
+  if (scaled === null || scaled === undefined || Number.isNaN(Number(scaled))) return '';
+  const d = Number(dec ?? 0);
+  return (Number(scaled) / Math.pow(10, d)).toFixed(d);
+};
+
 // // Heuristic parser: returns a real decimal number (not scaled integer)
 // // - If string contains '.', treat as decimal and parse directly.
 // // - Else if numeric value >= 10^decimals (absolute), assume it's a scaled integer and divide.

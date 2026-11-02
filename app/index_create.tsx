@@ -15,7 +15,8 @@ import {
 } from 'react-native';
 import {
   DROPDOWN_LIST_NONE,
-  SUSPEND, SUSPENDED
+  SUSPEND, SUSPENDED,
+  toDisplayPrice
 } from '../src/common/common';
 import { DarkTheme } from '../src/common/theme';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
@@ -103,9 +104,10 @@ export default function IndexCreateScreen() {
     setDescription(src.descr ?? '');
     setPriceDecimals(src.price_dec != null ? String(src.price_dec) : '');
     setValue(src.price != null ? String(src.price) : '');
-    setMinValue(src.min != null ? String(src.min) : '');
-    setMaxValue(src.max != null ? String(src.max) : '');
-    setReferenceValue(src.ref != null ? String(Number(src.ref) / Math.pow(10, Number(src.price_dec ?? 0))) : '');
+    setValue(toDisplayPrice(src.price, src.price_dec));
+    setMinValue(toDisplayPrice(src.min, src.price_dec));
+    setMaxValue(toDisplayPrice(src.max, src.price_dec));
+    setReferenceValue(toDisplayPrice(src.ref, src.price_dec));
     setValidateOrders(
       String(src.val_ord).toUpperCase() === 'Y' || String(src.val_ord) === '1' ? 'Y' : 'N'
     );

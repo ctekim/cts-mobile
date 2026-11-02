@@ -247,6 +247,7 @@ const ERROR_SCHEDULE_TYPE_NOT_ALLOWED				   = 1251;
 const ERROR_TRIGGER_TYPE_NOT_ALLOWED				   = 1252;
 const ERROR_ORDER_ALREADY_WITHDRAWN              = 1253;
 const ERROR_MUST_BE_POSITIVE                    = 1254;
+const ERROR_INVALID_CIRCUIT_BREAKER_CONFIG    = 1255;
 
 const ERROR_MESSAGE_NOT_A_STRING               = 2000;
 const ERROR_MESSAGE_NOT_AN_INTEGER             = 2001;
@@ -790,6 +791,8 @@ export const TranslateErrorMessage = (error_code: number): string => {
          return "Order already withdrawn";
       case ERROR_MUST_BE_POSITIVE:
          return "Value must be positive";
+      case ERROR_INVALID_CIRCUIT_BREAKER_CONFIG:
+         return "Invalid circuit breaker configuration";
       default:
          // console.log('error code: ', error_code);
          return   "Unknow error code: " + error_code;

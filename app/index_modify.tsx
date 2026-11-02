@@ -17,7 +17,8 @@ import {
   DROPDOWN_LIST_NONE,
   STATUS_ACTIVE,
   stripAndNum,
-  SUSPEND, SUSPENDED
+  SUSPEND, SUSPENDED,
+  toDisplayPrice
 } from '../src/common/common';
 import { DarkTheme } from '../src/common/theme';
 import { ConfirmDialog } from '../src/components/ConfirmDialog';
@@ -109,14 +110,10 @@ export default function IndexModifyScreen() {
     if (!row) return;
     setDescription(String(row.descr ?? ''));
     setPriceDecimals(row.price_dec != null ? String(row.price_dec) : '');
-    setValue(row.price != null ? String(row.price) : '');
-    setMinValue(row.min != null ? String(row.min) : '');
-    setMaxValue(row.max != null ? String(row.max) : '');
-    setReferenceValue(
-      row.ref != null
-        ? String(Number(row.ref) / Math.pow(10, Number(row.price_dec ?? 0)))
-        : ''
-    );
+    setValue(toDisplayPrice(row.price, row.price_dec));
+    setMinValue(toDisplayPrice(row.min, row.price_dec));
+    setMaxValue(toDisplayPrice(row.max, row.price_dec));
+    setReferenceValue(toDisplayPrice(row.ref, row.price_dec));
     setValidateOrders(
       String(row.val_ord).toUpperCase() === 'Y' || String(row.val_ord) === '1' ? 'Y' : 'N'
     );
