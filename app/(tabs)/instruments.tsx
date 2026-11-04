@@ -1,33 +1,39 @@
 // app/instruments.tsx
-import { useRef, useState, useEffect } from 'react';
-import {
-  View, Text, FlatList, ScrollView, TouchableOpacity, Pressable,
-  StyleSheet, NativeSyntheticEvent, NativeScrollEvent, Alert
-} from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAppSelector } from '../../src/redux/hooks';
-import { selectTableData, selectTSConnected } from '../../src/redux/globalsSlice';
-import { handleLogout } from '../../src/services/logout';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  INSTRUMENT_TYPE_CURRENCY,
-  INSTRUMENT_TYPE_CRYPTO_CURRENCY,
+   FlatList,
+   NativeScrollEvent,
+   NativeSyntheticEvent,
+   Pressable,
+   ScrollView,
+   StyleSheet,
+   Text,
+   TouchableOpacity,
+   View
+} from 'react-native';
+import {
+   INSTRUMENT_TYPE_CRYPTO_CURRENCY,
+   INSTRUMENT_TYPE_CURRENCY,
+   STATUS_ACTIVE, STATUS_SUSPEND,
 } from '../../src/common/common';
 import { formatPrice, formatQty, formatStatus } from '../../src/common/format';
 import { DarkTheme } from '../../src/common/theme';
-import { Fab } from '../../src/components/Fab';
-import {
-  sendInstrumentChangeStatus,
-  sendInstrumentCancelAllOrders,
-} from '../../src/services/instrument_messages';
-import { STATUS_ACTIVE, STATUS_SUSPEND } from '../../src/common/common';
-import { selectIsMarketController } from '../../src/redux/globalsSlice';
 import { ConfirmDialog } from '../../src/components/ConfirmDialog';
+import { Fab } from '../../src/components/Fab';
+import { selectIsMarketController, selectTableData, selectTSConnected } from '../../src/redux/globalsSlice';
+import { useAppSelector } from '../../src/redux/hooks';
+import {
+   sendInstrumentCancelAllOrders,
+   sendInstrumentChangeStatus,
+} from '../../src/services/instrument_messages';
+import { handleLogout } from '../../src/services/logout';
 import { confirmLogout } from '../../src/services/logout_coordinator';
 
 const CODE_WIDTH = 90;
 const ROW_HEIGHT = 36;
 
-const COLUMNS = [
+const BASE_COLUMNS = [
   { key: 'last',    label: 'Last',        width: 95,  format: 'price' as const },
   { key: 'prev',    label: 'Prev',        width: 95,  format: 'price' as const },
   { key: 'open',    label: 'Open',        width: 95,  format: 'price' as const },
@@ -45,9 +51,9 @@ const COLUMNS = [
   { key: 'status',  label: 'Status',      width: 95,  format: 'status' as const },
 ];
 
-type ColumnDef = typeof COLUMNS[number];
+const RULES_COLUMN = { key: 'rules', label: 'Rules', width: 200, format: 'text' as const };
 
-const TOTAL_DATA_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);
+type ColumnDef = typeof BASE_COLUMNS[number];
 
 export default function InstrumentsScreen() {
    const router = useRouter();
@@ -62,6 +68,16 @@ export default function InstrumentsScreen() {
 
    const connected = useAppSelector(selectTSConnected);
    const isMarketController = useAppSelector(selectIsMarketController);
+   const COLUMNS = useMemo(
+      () => (isMarketController ? [...BASE_COLUMNS, RULES_COLUMN] : BASE_COLUMNS),
+      [isMarketController]
+   );
+
+   const TOTAL_DATA_WIDTH = useMemo(
+      () => COLUMNS.reduce((sum, c) => sum + c.width, 0),
+      [COLUMNS]
+   );
+
    const [actionTarget, setActionTarget] = useState<any | null>(null);
    const [pendingAction, setPendingAction] = useState<
       | { kind: 'suspend' | 'activate' | 'cancelAll'; instrument: string; newStatus?: string; withdraw?: 'Y' | 'N' }
