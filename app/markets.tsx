@@ -41,24 +41,6 @@ const COLUMNS: ColumnDef[] = [
   { key: 'exch',   label: 'Exchange',    width: 100, format: 'text' },
   { key: 'descr',  label: 'Description', width: 260, format: 'text' },
   { key: 'status', label: 'Status',      width: 100, format: 'status' },
-
-  { key: '1_per',  label: 'Lvl 1 %',     width: 80,  format: 'text' },
-  { key: '1_dur',  label: 'Lvl 1 Dur',   width: 80,  format: 'text' },
-  { key: '1_trig', label: 'Lvl 1 Trig',  width: 80,  format: 'yn' },
-  { key: '1_str',  label: 'Lvl 1 Start', width: 110, format: 'text' },
-  { key: '1_end',  label: 'Lvl 1 End',   width: 110, format: 'text' },
-
-  { key: '2_per',  label: 'Lvl 2 %',     width: 80,  format: 'text' },
-  { key: '2_dur',  label: 'Lvl 2 Dur',   width: 80,  format: 'text' },
-  { key: '2_trig', label: 'Lvl 2 Trig',  width: 80,  format: 'yn' },
-  { key: '2_str',  label: 'Lvl 2 Start', width: 110, format: 'text' },
-  { key: '2_end',  label: 'Lvl 2 End',   width: 110, format: 'text' },
-
-  { key: '3_per',  label: 'Lvl 3 %',     width: 80,  format: 'text' },
-  // { key: '3_dur',  label: 'Lvl 3 Dur',   width: 80,  format: 'text' },
-  { key: '3_trig', label: 'Lvl 3 Trig',  width: 80,  format: 'text' },
-  // { key: '3_str',  label: 'Lvl 3 Start', width: 110, format: 'text' },
-  { key: '3_end',  label: 'Lvl 3 End',   width: 110, format: 'text' },
 ];
 
 const TOTAL_DATA_WIDTH = COLUMNS.reduce((sum, c) => sum + c.width, 0);

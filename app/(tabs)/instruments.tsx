@@ -53,7 +53,28 @@ const BASE_COLUMNS = [
 
 const RULES_COLUMN = { key: 'rules', label: 'Rules', width: 200, format: 'text' as const };
 
-type ColumnDef = typeof BASE_COLUMNS[number];
+const CIRCUIT_BREAKER_COLUMNS = [
+  { key: '1_per',  label: 'Lvl 1 %',     width: 80,  format: 'text' as const },
+  { key: '1_dur',  label: 'Lvl 1 Dur',   width: 80,  format: 'text' as const },
+  { key: '1_trig', label: 'Lvl 1 Trig',  width: 80,  format: 'yn'   as const },
+  { key: '1_str',  label: 'Lvl 1 Start', width: 110, format: 'text' as const },
+  { key: '1_end',  label: 'Lvl 1 End',   width: 110, format: 'text' as const },
+
+  { key: '2_per',  label: 'Lvl 2 %',     width: 80,  format: 'text' as const },
+  { key: '2_dur',  label: 'Lvl 2 Dur',   width: 80,  format: 'text' as const },
+  { key: '2_trig', label: 'Lvl 2 Trig',  width: 80,  format: 'yn'   as const },
+  { key: '2_str',  label: 'Lvl 2 Start', width: 110, format: 'text' as const },
+  { key: '2_end',  label: 'Lvl 2 End',   width: 110, format: 'text' as const },
+
+  { key: '3_per',  label: 'Lvl 3 %',     width: 80,  format: 'text' as const },
+//   { key: '3_dur',  label: 'Lvl 3 Dur',   width: 80,  format: 'text' as const },
+  { key: '3_trig', label: 'Lvl 3 Trig',  width: 80,  format: 'yn'   as const },
+  { key: '3_str',  label: 'Lvl 3 Rules', width: 110, format: 'text' as const },
+//   { key: '3_end',  label: 'Lvl 3 End',   width: 110, format: 'text' as const },
+  { key: 'time',   label: 'End Time',    width: 90,  format: 'text' as const },
+];
+
+type ColumnDef = typeof BASE_COLUMNS[number] | typeof RULES_COLUMN | typeof CIRCUIT_BREAKER_COLUMNS[number];
 
 export default function InstrumentsScreen() {
    const router = useRouter();
@@ -69,7 +90,9 @@ export default function InstrumentsScreen() {
    const connected = useAppSelector(selectTSConnected);
    const isMarketController = useAppSelector(selectIsMarketController);
    const COLUMNS = useMemo(
-      () => (isMarketController ? [...BASE_COLUMNS, RULES_COLUMN] : BASE_COLUMNS),
+      () => (isMarketController
+         ? [...BASE_COLUMNS, RULES_COLUMN, ...CIRCUIT_BREAKER_COLUMNS]
+         : BASE_COLUMNS),
       [isMarketController]
    );
 
@@ -135,6 +158,7 @@ export default function InstrumentsScreen() {
          case 'price':  return formatPrice(raw, item.price_dec ?? 0);
          case 'qty':    return formatQty(raw, item.qty_dec ?? 0);
          case 'status': return formatStatus(raw);
+         case 'yn':     return raw === 'Y' ? 'Yes' : raw === 'N' ? 'No' : String(raw);
          case 'text':
          default:       return String(raw);
       }
@@ -176,7 +200,6 @@ export default function InstrumentsScreen() {
          },
          pressed && { backgroundColor: DarkTheme.surfacePressed },
          ]}
-         // onPress={() => console.log('[instruments] tapped:', item.code)}
       >
          <Text style={[styles.codeText, { color: codeColor(item) }]} numberOfLines={1}>
          {item.code ?? ''}
