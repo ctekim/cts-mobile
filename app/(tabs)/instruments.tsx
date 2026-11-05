@@ -400,6 +400,24 @@ export default function InstrumentsScreen() {
                         },
                      },
                      {
+                        label: 'Modify',
+                        style: 'success',
+                        onPress: () => {
+                           const code = actionTarget.code;
+                           setActionTarget(null);
+                           router.push({ pathname: '/instrument_modify', params: { instr: code } });
+                        },
+                     },
+                     {
+                        label: 'Create',
+                        style: 'success',
+                        onPress: () => {
+                           const sourceCode = actionTarget.code;
+                           setActionTarget(null);
+                           router.push({ pathname: '/instrument_create', params: { from: sourceCode } });
+                        },
+                     },
+                     {
                         label: 'Trade Entry',
                         style: 'success',
                         onPress: () => {
